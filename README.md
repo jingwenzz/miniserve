@@ -27,17 +27,22 @@ Each step of the engine:
 
 Requires Python 3.11+.
 
+Create a clean virtual environment and install the project with development dependencies:
+
 ```bash
-pip install -e .
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e '.[dev]'
+```
+
+Run the demo and the test suite from the repository root:
+
+```bash
 python benchmarks/demo_scheduler.py
+python -m pytest -q
 ```
 
-Run the test suite:
-
-```bash
-pip install -e ".[dev]"
-pytest
-```
+Verified on 2026-11-04 (Day 1): Python 3.12.3, pytest 9.2.0, 17 passed, demo completed 3 requests in 5 steps. See `docs/devlog.md` for the full record.
 
 ## Scope and design choices
 
