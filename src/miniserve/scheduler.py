@@ -4,6 +4,10 @@ from dataclasses import dataclass
 from miniserve.request import Request
 
 
+class RequestRejectedError(ValueError):
+    """Raised when a request can never be admitted by this scheduler."""
+
+
 @dataclass
 class SchedulerOutput:
     prefill_requests: list[Request]
@@ -19,6 +23,7 @@ class Scheduler:
         self,
         max_batch_size: int,
         max_batch_tokens: int,
+        max_model_len: int | None = None,
     ) -> None:
         if max_batch_size <= 0:
             raise ValueError("max_batch_size must be positive")
@@ -26,8 +31,12 @@ class Scheduler:
         if max_batch_tokens <= 0:
             raise ValueError("max_batch_tokens must be positive")
 
+        if max_model_len is not None and max_model_len <= 0:
+            raise ValueError("max_model_len must be positive")
+
         self.max_batch_size = max_batch_size
         self.max_batch_tokens = max_batch_tokens
+        self.max_model_len = max_model_len
 
         self.waiting: deque[Request] = deque()
         self.running: list[Request] = []
@@ -35,6 +44,26 @@ class Scheduler:
     def add_request(self, request: Request) -> None:
         if request.is_finished:
             raise ValueError("Cannot add a finished request")
+
+        if request.prompt_length > self.max_batch_tokens:
+            raise RequestRejectedError(
+                f"Request {request.request_id} has a prompt of "
+                f"{request.prompt_length} tokens, which exceeds the "
+                f"per step token budget of {self.max_batch_tokens}. "
+                "Prefill is not chunked, so this request could never "
+                "be scheduled."
+            )
+
+        if self.max_model_len is not None:
+            reserved_length = request.prompt_length + request.max_new_tokens
+            if reserved_length > self.max_model_len:
+                raise RequestRejectedError(
+                    f"Request {request.request_id} reserves "
+                    f"{reserved_length} tokens (prompt "
+                    f"{request.prompt_length} plus max_new_tokens "
+                    f"{request.max_new_tokens}), which exceeds the "
+                    f"model context limit of {self.max_model_len}."
+                )
 
         self.waiting.append(request)
 
