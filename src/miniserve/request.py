@@ -24,6 +24,17 @@ class Request:
     first_token_time: float | None = None
     finished_time: float | None = None
 
+    def __post_init__(self) -> None:
+        if not self.prompt_token_ids:
+            raise ValueError(
+                "prompt_token_ids must not be empty: an empty prompt is "
+                "rejected explicitly instead of being silently turned "
+                "into a special token"
+            )
+
+        if self.max_new_tokens <= 0:
+            raise ValueError("max_new_tokens must be positive")
+
     @property
     def prompt_length(self) -> int:
         return len(self.prompt_token_ids)
