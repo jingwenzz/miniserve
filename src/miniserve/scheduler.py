@@ -40,10 +40,45 @@ class Scheduler:
 
         self.waiting: deque[Request] = deque()
         self.running: list[Request] = []
+        # Request ids are unique for the lifetime of this scheduler.
+        # An id is recorded only when a request is actually admitted,
+        # so an id used by a rejected offer stays available for a
+        # corrected request.
+        self._seen_request_ids: set[str] = set()
+
+    def _prune_terminal(self) -> None:
+        """Drop terminal requests from both queues.
+
+        A caller can cancel a request object directly, without going
+        through cancel_request, so terminal entries can appear in
+        either queue between steps. Pruning here guarantees that a
+        cancelled request is never handed to the executor, where
+        starting prefill on it would be an error.
+        """
+        self.waiting = deque(
+            request for request in self.waiting if not request.is_finished
+        )
+        self.running = [
+            request for request in self.running if not request.is_finished
+        ]
+
+    def _find_active(self, request_id: str) -> Request | None:
+        for request in list(self.waiting) + self.running:
+            if request.request_id == request_id and not request.is_finished:
+                return request
+        return None
 
     def add_request(self, request: Request) -> None:
         if request.is_finished:
             raise ValueError("Cannot add a finished request")
+
+        if request.request_id in self._seen_request_ids:
+            raise RequestRejectedError(
+                f"Request id {request.request_id} has already been "
+                "used in this scheduler. Request ids are unique for "
+                "the lifetime of a scheduler, so a duplicate offer "
+                "never occupies a second queue slot."
+            )
 
         if request.prompt_length > self.max_batch_tokens:
             raise RequestRejectedError(
@@ -65,14 +100,35 @@ class Scheduler:
                     f"model context limit of {self.max_model_len}."
                 )
 
+        self._seen_request_ids.add(request.request_id)
         self.waiting.append(request)
 
+    def cancel_request(self, request_id: str) -> bool:
+        """Cancel an active request by id and remove it from its queue.
+
+        This is the single cancellation entry point for callers that
+        hold only an id. It returns True when an active request was
+        cancelled. Cancelling again, or cancelling a request that
+        already finished, is a harmless no-op that returns False and
+        leaves the terminal state and the queues untouched. An id
+        that this scheduler has never admitted raises KeyError, so a
+        mistyped id is not silently ignored.
+        """
+        self._prune_terminal()
+
+        request = self._find_active(request_id)
+        if request is not None:
+            request.cancel()
+            self._prune_terminal()
+            return True
+
+        if request_id in self._seen_request_ids:
+            return False
+
+        raise KeyError(f"Unknown request id: {request_id}")
+
     def schedule(self) -> SchedulerOutput:
-        self.running = [
-            request
-            for request in self.running
-            if not request.is_finished
-        ]
+        self._prune_terminal()
 
         decode_requests: list[Request] = []
         used_tokens = 0
@@ -115,11 +171,8 @@ class Scheduler:
             if not request.is_finished:
                 self.running.append(request)
 
-        self.running = [
-            request
-            for request in self.running
-            if not request.is_finished
-        ]
+        self._prune_terminal()
 
     def has_pending_requests(self) -> bool:
+        self._prune_terminal()
         return bool(self.waiting or self.running)
