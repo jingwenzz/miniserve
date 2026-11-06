@@ -138,8 +138,69 @@ Admission happens in `Scheduler.add_request`.
   with the input validation work that follows this document.
 - A rejected request is not added to any queue, and rejecting it must
   not change the state of requests that were already admitted.
+- Request ids are unique for the lifetime of one scheduler. An id is
+  recorded only when a request is actually admitted, so an offer
+  that is rejected for a validation reason does not burn its id, and
+  a corrected request may reuse it. Once a request has been
+  admitted, offering the same id again, or offering the same request
+  object again, is rejected with `RequestRejectedError` and never
+  occupies a second queue slot. The duplicate rule also holds after
+  the first request finishes or is cancelled: within one scheduler,
+  one id names exactly one request, ever. A new scheduler starts
+  with an empty set of ids.
 
-## 5. Boundary test checklist
+## 5. Cancellation contract
+
+`Scheduler.cancel_request(request_id)` is the single cancellation
+entry point for callers that hold only an id.
+
+- Cancelling a `WAITING` request removes it from `waiting`. It never
+  starts prefill and never produces a token.
+- Cancelling a `DECODING` request removes it from `running`. It
+  keeps the tokens it already produced and receives no new ones.
+  Other requests are unaffected and continue to completion.
+- The call returns `True` when it cancelled an active request.
+  Cancelling a request that already reached a terminal state is a
+  harmless no-op: it returns `False`, the terminal state is left as
+  it was (a finished request does not become cancelled), and the
+  queues are untouched.
+- Cancelling an id the scheduler has never admitted raises
+  `KeyError`, so a mistyped id is not silently ignored.
+- A caller may also cancel a `Request` object directly. The
+  scheduler defends against that path by pruning terminal requests
+  from both queues at the start of `schedule` and inside
+  `has_pending_requests`, so a directly cancelled waiting request is
+  dropped before it can be selected, and the executor is never asked
+  to start prefill on a `CANCELLED` request.
+- Cancellation takes effect at a scheduling boundary. Work already
+  handed to the executor inside the current step is not interrupted
+  mid step; the cancelled request is excluded from the next step on.
+
+## 6. Hand traced scheduler budget examples
+
+Cost model used for every trace below: a prefill costs its prompt
+length in tokens, each decode costs 1 token, the sum of the costs
+selected in one step must stay at or below `max_batch_tokens`, and
+the number of selected requests must stay at or below
+`max_batch_size`. Decode is selected before prefill.
+
+| Case | Setup | Hand trace | Result |
+| --- | --- | --- | --- |
+| Exact fill | Budget 6, one running request, one waiting prompt of 5 | Decode 1 plus prefill 5 equals 6 | Both are selected in the same step |
+| One token over | Budget 6, one running request, one waiting prompt of 6 | Decode 1 plus prefill 6 equals 7, above 6 | Prefill waits; the prompt fits the budget alone, so this is temporary, not a rejection |
+| Temporary block clears | Same as above, running request finishes after its decode | Next step has no decode cost, prefill 6 equals 6 | The waiting request is selected in the next step |
+| Batch size 1 | Batch size 1, budget 100, three waiting requests | Only one slot exists | Only the head request is selected for prefill |
+| Batch size 1 with running work | Batch size 1, one running request, one waiting request | The single slot goes to decode first | The waiting request stays queued |
+| Two finish together | Batch size 2, two running requests each need 1 more token, two waiting | Both decode and finish in one step; both slots free up | Both waiting requests are selected for prefill in the next step |
+| FIFO head of line blocking | Budget 5, one running request, waiting head prompt 5, small prompt 1 behind it | Decode 1 plus head 5 equals 6, above 5; the small request would fit (1 plus 1) but sits behind the head | Neither waiting request is selected; queue order is preserved |
+
+Two kinds of "does not fit" must stay distinct. A request that can
+never fit, such as a prompt longer than the whole step budget, is
+rejected at admission and never queues. A request that only does
+not fit this step, because decode work is using part of the budget,
+waits and runs in a later step once the budget frees up.
+
+## 7. Boundary test checklist
 
 Tests that must exist or be added as each area lands:
 
@@ -154,19 +215,19 @@ Admission and validation:
 - [x] Prompt plus reserved output exactly equal to the model context limit is admitted, when a context limit is configured.
 - [x] Prompt plus reserved output one above the model context limit is rejected, when a context limit is configured.
 
-Cancellation and duplicate handling (next scheduled work):
+Cancellation and duplicate handling:
 
-- [ ] Cancelling a waiting request means it never starts prefill and produces no tokens.
-- [ ] Cancelling a running request stops further tokens for it and does not affect other requests.
-- [ ] Cancelling an already finished or cancelled request does not corrupt the queues.
-- [ ] Offering the same active `request_id` twice is rejected.
-- [ ] Offering the same request object twice is rejected.
+- [x] Cancelling a waiting request means it never starts prefill and produces no tokens.
+- [x] Cancelling a running request stops further tokens for it and does not affect other requests.
+- [x] Cancelling an already finished or cancelled request does not corrupt the queues.
+- [x] Offering the same active `request_id` twice is rejected.
+- [x] Offering the same request object twice is rejected.
 
-Budget boundaries (following scheduled work):
+Budget boundaries:
 
-- [ ] Prefill cost exactly filling the remaining step budget is admitted in that step.
-- [ ] Prefill cost one token above the remaining step budget waits for a later step.
-- [ ] `max_batch_size` of 1 serialises selection.
-- [ ] Several requests finishing in the same step free their slots for the next step.
-- [ ] A temporarily too large head request blocks later waiting requests (documented trade off above), while a permanently too large request is rejected at admission instead.
+- [x] Prefill cost exactly filling the remaining step budget is admitted in that step.
+- [x] Prefill cost one token above the remaining step budget waits for a later step.
+- [x] `max_batch_size` of 1 serialises selection.
+- [x] Several requests finishing in the same step free their slots for the next step.
+- [x] A temporarily too large head request blocks later waiting requests (documented trade off above), while a permanently too large request is rejected at admission instead.
 
