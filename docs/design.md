@@ -97,7 +97,7 @@ Responsibilities:
 | Changing request state during prefill and decode | Executor, through the `Request` transition methods |
 | Pruning terminal requests from `running` | Scheduler |
 | Driving one full step (schedule, execute, update) | Engine |
-| Cleaning up a request that finishes or is cancelled | Scheduler prunes the queue entry; executor side resource cleanup becomes explicit when a real executor owns per request resources |
+| Cleaning up a request that finishes or is cancelled | Scheduler prunes the queue entry; Engine calls executor release for backend resources (see section 8) |
 
 ## 3. Two different limits: step budget and resident capacity
 
@@ -230,4 +230,87 @@ Budget boundaries:
 - [x] `max_batch_size` of 1 serialises selection.
 - [x] Several requests finishing in the same step free their slots for the next step.
 - [x] A temporarily too large head request blocks later waiting requests (documented trade off above), while a permanently too large request is rejected at admission instead.
+
+Executor boundary:
+
+- [x] The engine runs to completion with a custom executor that shares no code with the fake backend.
+- [x] A finished request is released exactly once.
+- [x] No release happens while a request is still active.
+- [x] A running request cancelled between steps is released, and a waiting request cancelled before prefill needs no release.
+- [x] Releasing the same request twice on the fake backend is a safe no-op after the first call.
+
+## 8. Executor contract
+
+The engine depends on the `Executor` protocol in
+`src/miniserve/executor.py`, not on `FakeExecutor`. The scheduler
+never talks to an executor, so replacing the backend does not change
+scheduling, admission, or the budget rules. The protocol is three
+methods:
+
+| Method | Input | Effect on success | Resources |
+| --- | --- | --- | --- |
+| `prefill(requests)` | The WAITING requests the scheduler selected for this step | Each request moves WAITING to PREFILLING to DECODING, through the `Request` transition methods | The executor creates any per request backend state here, such as a KV cache in a real backend |
+| `decode(requests)` | The DECODING requests the scheduler selected for this step | Exactly one token is appended to each request; a request that reaches its output limit finishes | The executor updates the per request backend state it created in prefill |
+| `release(request)` | One request that reached a terminal state | No change to the request state or its tokens | The executor frees the per request backend state for that request |
+
+Responsibility is split once, not duplicated:
+
+- The executor owns the request state transitions that happen
+  during execution and the tokens it appends. The engine does not
+  also update `Request` state for prefill or decode, and the
+  scheduler never calls executor methods.
+- The scheduler owns the queues. It decides which requests are
+  selected, moves prefill requests into `running` in `update`, and
+  prunes terminal requests.
+- The engine owns the order of one step and the timing of release.
+  It tracks every request the executor started work on, and after
+  `update` it calls `release` for each tracked request that reached
+  a terminal state, at most once per request. Tracking matters for
+  cancellation: a running request cancelled between steps leaves the
+  running list without appearing in a later step output, so the
+  engine sweeps its tracked set at the end of each step and once
+  more at the end of `run_until_complete`. A request cancelled
+  while waiting was never tracked, never ran prefill, and holds no
+  backend resources, so it needs no release.
+- `release` must be idempotent on the executor side as a second
+  safety net. The fake backend holds no per request resources, so
+  its release only records the request id, in order, in
+  `released_request_ids`, which tests use to verify the engine
+  drives release correctly.
+
+Failure responsibility: if `prefill` or `decode` raises, the
+exception propagates to the caller of the engine. The request is
+left in whatever state the executor reached, the scheduler
+`update` for that step does not run, and no release is invented for
+a request that is not terminal. There is still no FAILED state at
+this checkpoint (see section 1); giving execution failures a
+terminal state and a recorded reason remains future work for when
+a real executor introduces a real failure path.
+
+What a real backend swap changes and does not change: a real
+executor must implement the same three methods, produce the first
+token semantics agreed at that stage, and free its cache in
+`release`. It does not require changes to the scheduler contract,
+the admission rules, the cancellation entry point, or the per step
+budget accounting.
+
+## 9. First week checkpoint
+
+Checked on 2026-11-06 by rerunning the full suite and the demo:
+
+- Normal requests complete through the engine with both the fake
+  backend and a custom protocol executor.
+- Overlong and otherwise invalid requests are rejected at admission
+  and never enter a queue.
+- Cancellation of waiting and running requests and duplicate
+  request ids have explicit, tested behaviour.
+- The scheduler budget boundaries are covered by hand traced tests.
+- Open items carried forward, in priority order: there is no FAILED
+  state or failure reason yet, because there is still no real
+  execution failure path; resident cache capacity is distinguished
+  from the per step budget in this document but not yet enforced;
+  cancellation still takes effect at a scheduling boundary, not in
+  the middle of a step. None of these block the metrics work that
+  comes next, and the FAILED decision must be revisited when a real
+  executor is introduced.
 
