@@ -18,9 +18,12 @@ class VerboseEngine(Engine):
             f"decode={format_request_ids(output.decode_requests)}"
         )
 
+        self._track(output.prefill_requests)
+        self._track(output.decode_requests)
         self.executor.prefill(output.prefill_requests)
         self.executor.decode(output.decode_requests)
         self.scheduler.update(output)
+        self.release_terminal_requests()
 
         print(
             f"         running={format_request_ids(self.scheduler.running)} "
