@@ -1,6 +1,9 @@
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from time import monotonic
+
+Clock = Callable[[], float]
 
 
 class RequestState(Enum):
@@ -14,15 +17,19 @@ class RequestState(Enum):
 @dataclass
 class Request:
     request_id: str
-    prompt_token_ids: list[int] # prefill
+    prompt_token_ids: list[int]  # prefill
     max_new_tokens: int
 
-    generated_token_ids: list[int] = field(default_factory=list) # decode outpu
+    generated_token_ids: list[int] = field(default_factory=list)  # decode output
     state: RequestState = RequestState.WAITING
 
-    arrival_time: float = field(default_factory=monotonic)
+    arrival_time: float | None = None
     first_token_time: float | None = None
     finished_time: float | None = None
+    admission_time: float | None = None
+    prefill_start_time: float | None = None
+    last_token_time: float | None = None
+    clock: Clock = field(default=monotonic, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if not self.prompt_token_ids:
@@ -34,6 +41,9 @@ class Request:
 
         if self.max_new_tokens <= 0:
             raise ValueError("max_new_tokens must be positive")
+
+        if self.arrival_time is None:
+            self.arrival_time = self.clock()
 
     @property
     def prompt_length(self) -> int:
@@ -54,14 +64,33 @@ class Request:
             RequestState.CANCELLED,
         }
 
+    @property
+    def finish_reason(self) -> str | None:
+        if self.state is RequestState.FINISHED:
+            return "finished"
+        if self.state is RequestState.CANCELLED:
+            return "cancelled"
+        return None
+
+    def mark_admitted(self) -> None:
+        """Record admission into the scheduler waiting queue.
+
+        Called by the scheduler exactly once, when it accepts the
+        request. A second call does not overwrite the first time.
+        """
+        if self.admission_time is None:
+            self.admission_time = self.clock()
+
     def start_prefill(self) -> None:
         if self.state is not RequestState.WAITING:
             raise RuntimeError(
                 f"Cannot start prefill from state {self.state.name}"
             )
 
-        self.state = RequestState.PREFILLING
+        if self.prefill_start_time is None:
+            self.prefill_start_time = self.clock()
 
+        self.state = RequestState.PREFILLING
 
     def finish_prefill(self) -> None:
         if self.state is not RequestState.PREFILLING:
@@ -71,21 +100,21 @@ class Request:
 
         self.state = RequestState.DECODING
 
-
     def append_token(self, token_id: int) -> None:
         if self.state is not RequestState.DECODING:
             raise RuntimeError(
                 f"Cannot append token from state {self.state.name}"
             )
 
+        now = self.clock()
         if self.first_token_time is None:
-            self.first_token_time = monotonic()
+            self.first_token_time = now
+        self.last_token_time = now
 
         self.generated_token_ids.append(token_id)
 
         if self.output_length >= self.max_new_tokens:
             self.finish()
-
 
     def finish(self) -> None:
         if self.state is not RequestState.DECODING:
@@ -94,8 +123,7 @@ class Request:
             )
 
         self.state = RequestState.FINISHED
-        self.finished_time = monotonic()
-
+        self.finished_time = self.clock()
 
     def cancel(self) -> None:
         if self.is_finished:
@@ -104,4 +132,4 @@ class Request:
             )
 
         self.state = RequestState.CANCELLED
-        self.finished_time = monotonic()    
+        self.finished_time = self.clock()
