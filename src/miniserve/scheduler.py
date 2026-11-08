@@ -101,6 +101,7 @@ class Scheduler:
                 )
 
         self._seen_request_ids.add(request.request_id)
+        request.mark_admitted()
         self.waiting.append(request)
 
     def cancel_request(self, request_id: str) -> bool:
