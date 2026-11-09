@@ -314,3 +314,63 @@ Checked on 2026-11-06 by rerunning the full suite and the demo:
   comes next, and the FAILED decision must be revisited when a real
   executor is introduced.
 
+## 10. Serial baseline and the policy switch
+
+`SerialScheduler` in `src/miniserve/scheduler.py` is the one at a
+time baseline. It subclasses `Scheduler`, so admission, validation,
+cancellation, and duplicate id handling are inherited unchanged and
+are not reimplemented. The `Request` type, the executor contract,
+and the stopping rule (`max_new_tokens`, enforced inside
+`Request.append_token`) are also shared. The whole engine is not
+copied: one `Engine` drives either scheduler.
+
+The only difference is selection in `schedule`:
+
+- Continuous: decode work is selected first, then waiting requests
+  may join for prefill in the same step while batch size and token
+  budget allow.
+- Serial: at most one request is active. If a request is running,
+  only that request is selected for decode and no prefill is
+  selected, even when slots and budget are free. If nothing is
+  running, only the head waiting request is selected for prefill.
+
+`create_scheduler(policy, ...)` is the single configuration switch.
+The value `continuous` returns a `Scheduler`, `serial` returns a
+`SerialScheduler`, and any other value raises `ValueError`.
+
+Fairness rule: a comparison is only meaningful when both policies
+receive the same request specifications, the same executor, and
+the same limits. With the fake executor and the three request demo
+set, both policies produce output lengths 4, 2, and 3; the serial
+run takes 12 steps and the continuous run takes 5 steps. Those step
+counts are simulation scheduling counts, not model throughput.
+
+## 11. Deterministic workloads
+
+`src/miniserve/workload.py` generates fixed workloads. Each
+`WorkloadRequestSpec` carries the request id, the exact prompt
+token ids, the output limit, and the arrival time, so a workload
+can be rebuilt exactly and shared by both schedulers.
+
+- Profiles: `short` (prompt 4 to 16, output 2 to 8), `mixed`
+  (prompts alternating short 4 to 12 and long 32 to 64 by position,
+  output 2 to 16), and `long_output` (prompt 8 to 32, output 24 to
+  48).
+- Determinism: generation uses a dedicated seeded random generator.
+  The same profile, seed, and count always produce the same ids,
+  token ids, output limits, and arrival times. A different seed
+  produces a different workload where the ranges allow variation.
+- Arrival times start at 0.0 and never decrease. They are
+  simulation timetable values. The current engine admits every
+  request it is given at once, so replaying requests at their
+  arrival times belongs to the experiment pipeline that follows;
+  the specification stores the time now so no later stage has to
+  invent it.
+- `build_requests` builds a fresh `Request` per specification on
+  every call, passing the stored arrival time, so replaying one
+  workload through two schedulers never shares request state.
+- A worked example with seed 1234 and six requests per profile is
+  saved in `benchmarks/workload_example.json`. Its token ids and
+  times are simulation data, not tokenizer output or measured
+  model performance.
+
