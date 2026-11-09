@@ -177,3 +177,90 @@ class Scheduler:
     def has_pending_requests(self) -> bool:
         self._prune_terminal()
         return bool(self.waiting or self.running)
+
+
+class SerialScheduler(Scheduler):
+    """One request at a time baseline scheduler.
+
+    This is the fair comparison baseline for the continuous
+    scheduler. It reuses exactly the same admission, validation,
+    cancellation, and duplicate id rules, the same Request type, and
+    the same executor contract as Scheduler. The only difference is
+    the selection policy in schedule: at most one request is ever
+    active. A waiting request is selected for prefill only when no
+    request is running, and while a request is running only that
+    request is selected for decode. No new prefill joins mid decode,
+    even if the batch size and token budget would allow it.
+
+    Because selection is the only difference, running the same
+    request set through both schedulers with the same executor must
+    produce the same output lengths. Any difference in step counts
+    or timing then comes from the scheduling policy alone.
+    """
+
+    def schedule(self) -> SchedulerOutput:
+        self._prune_terminal()
+
+        if self.running:
+            request = self.running[0]
+            decode_cost = 1
+            if decode_cost > self.max_batch_tokens:
+                return SchedulerOutput(
+                    prefill_requests=[],
+                    decode_requests=[],
+                )
+            return SchedulerOutput(
+                prefill_requests=[],
+                decode_requests=[request],
+            )
+
+        if self.waiting:
+            request = self.waiting[0]
+            prefill_cost = request.prompt_length
+            if prefill_cost > self.max_batch_tokens:
+                return SchedulerOutput(
+                    prefill_requests=[],
+                    decode_requests=[],
+                )
+            self.waiting.popleft()
+            return SchedulerOutput(
+                prefill_requests=[request],
+                decode_requests=[],
+            )
+
+        return SchedulerOutput(
+            prefill_requests=[],
+            decode_requests=[],
+        )
+
+
+def create_scheduler(
+    policy: str,
+    max_batch_size: int,
+    max_batch_tokens: int,
+    max_model_len: int | None = None,
+) -> Scheduler:
+    """Create a scheduler by policy name.
+
+    This is the single configuration switch between the two
+    scheduling strategies. The policy value continuous returns the
+    default Scheduler, serial returns SerialScheduler, and any
+    other value raises ValueError so a misspelled policy is never
+    silently treated as continuous.
+    """
+    if policy == "continuous":
+        return Scheduler(
+            max_batch_size=max_batch_size,
+            max_batch_tokens=max_batch_tokens,
+            max_model_len=max_model_len,
+        )
+    if policy == "serial":
+        return SerialScheduler(
+            max_batch_size=max_batch_size,
+            max_batch_tokens=max_batch_tokens,
+            max_model_len=max_model_len,
+        )
+    raise ValueError(
+        f"Unknown scheduler policy {policy!r}. "
+        "Expected 'continuous' or 'serial'."
+    )
