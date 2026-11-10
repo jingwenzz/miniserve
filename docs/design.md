@@ -374,3 +374,49 @@ can be rebuilt exactly and shared by both schedulers.
   times are simulation data, not tokenizer output or measured
   model performance.
 
+## 12. Simulation time and the step timeline
+
+Simulation runs keep their own time, separate from the wall
+clock. Every request in a run shares one `SimulationClock` from
+`src/miniserve/simulation.py`, and that clock only moves when the
+simulated executor charges an explicit cost: prefill costs a
+per token parameter times the prompt length, and decode costs a
+per token parameter per token, with both parameters recorded in
+the run configuration. Costs inside a step accumulate one request
+after another, so durations are hand costable and the total
+logical duration of a run is its total work under the model,
+whichever policy scheduled it.
+
+Requests are replayed at their workload arrival times: a request
+is admitted at the first step boundary at or after its arrival,
+and an idle clock jumps straight to the next arrival instead of
+stepping through empty rounds. Each step writes one timeline row
+with its logical start and end times, the prefill and decode ids
+it executed, and the waiting and running ids at its start, so
+step counts, queue rounds, and per step active counts can be
+checked without trusting a summary.
+
+The full contract, the hand worked example, and the limits of
+the model are in `docs/simulation.md`. The standing rule from
+that document: step counts are scheduling counts and durations
+are cost model artefacts; neither is model throughput, model
+latency, or evidence about a GPU.
+
+## 13. Experiment pipeline
+
+`benchmarks/run.py` runs one experiment: it generates the
+workload for a profile and seed, replays it under each chosen
+policy in simulation time, and writes a fresh run directory
+holding `config.json` (including the package version and the
+simulation costs), the raw per request metrics and per step
+timeline for each policy, and a summary. A run id names the
+directory, and an existing run id is refused rather than
+overwritten, so reruns always leave both traces.
+
+`benchmarks/summarize.py` is a separate entry point that
+recomputes the summary from the raw files in a run directory
+only. It never touches the objects that produced the run, so
+recomputing an unchanged directory reproduces the original
+summary exactly. The layout, the commands, and one recorded
+simulation comparison are in `docs/experiments.md`.
+
