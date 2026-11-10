@@ -27,7 +27,7 @@ tokenizer and they say nothing about real model performance.
 import random
 from dataclasses import dataclass
 
-from miniserve.request import Request
+from miniserve.request import Clock, Request
 
 PROFILE_SHORT = "short"
 PROFILE_MIXED = "mixed"
@@ -64,7 +64,7 @@ class WorkloadRequestSpec:
     def prompt_length(self) -> int:
         return len(self.prompt_token_ids)
 
-    def to_request(self) -> Request:
+    def to_request(self, clock: Clock | None = None) -> Request:
         """Build a fresh Request from this specification.
 
         A new Request is built on every call, so the same workload
@@ -72,12 +72,23 @@ class WorkloadRequestSpec:
         sharing request state. The arrival time stored in the
         specification is passed to the request, so its timestamps
         start from the timetable value instead of the wall clock.
+        When a clock is given, every timestamp the request records
+        comes from that one clock; simulation runs pass their shared
+        logical clock here so no wall clock value enters the run.
         """
+        if clock is None:
+            return Request(
+                request_id=self.request_id,
+                prompt_token_ids=list(self.prompt_token_ids),
+                max_new_tokens=self.max_new_tokens,
+                arrival_time=self.arrival_time,
+            )
         return Request(
             request_id=self.request_id,
             prompt_token_ids=list(self.prompt_token_ids),
             max_new_tokens=self.max_new_tokens,
             arrival_time=self.arrival_time,
+            clock=clock,
         )
 
 

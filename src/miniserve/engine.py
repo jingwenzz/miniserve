@@ -1,6 +1,6 @@
 from miniserve.executor import Executor
 from miniserve.request import Request
-from miniserve.scheduler import Scheduler
+from miniserve.scheduler import Scheduler, SchedulerOutput
 
 # schedule
 #    ↓
@@ -56,7 +56,7 @@ class Engine:
                 self.executor.release(request)
                 self._released.add(request_id)
 
-    def step(self) -> None:
+    def step(self) -> SchedulerOutput:
         output = self.scheduler.schedule()
 
         self._track(output.prefill_requests)
@@ -68,6 +68,7 @@ class Engine:
         self.scheduler.update(output)
         self.release_terminal_requests()
         self.step_count += 1
+        return output
 
     def run_until_complete(self) -> None:
         while self.scheduler.has_pending_requests():
