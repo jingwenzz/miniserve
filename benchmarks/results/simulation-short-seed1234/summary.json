@@ -1,0 +1,35 @@
+{
+  "kind": "simulation",
+  "policies": {
+    "continuous": {
+      "cancelled": 0,
+      "finished": 6,
+      "mean_latency": 15.816666666666668,
+      "mean_tpot": 1.6491269841269842,
+      "mean_ttft": 9.216666666666667,
+      "requests": 6,
+      "simulated_duration": 21.3,
+      "simulated_output_tokens_per_second": 1.408450704225352,
+      "steps": 12,
+      "total_output_tokens": 30,
+      "total_prompt_tokens": 63,
+      "unfinished": 0
+    },
+    "serial": {
+      "cancelled": 0,
+      "finished": 6,
+      "mean_latency": 12.316666666666668,
+      "mean_tpot": 0.5,
+      "mean_ttft": 10.316666666666666,
+      "requests": 6,
+      "simulated_duration": 21.3,
+      "simulated_output_tokens_per_second": 1.408450704225352,
+      "steps": 36,
+      "total_output_tokens": 30,
+      "total_prompt_tokens": 63,
+      "unfinished": 0
+    }
+  },
+  "run_id": "simulation-short-seed1234",
+  "simulation": true
+}

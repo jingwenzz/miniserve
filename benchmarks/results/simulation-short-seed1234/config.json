@@ -1,0 +1,56 @@
+{
+  "decode_seconds_per_token": 0.5,
+  "kind": "simulation",
+  "max_batch_size": 4,
+  "max_batch_tokens": 64,
+  "max_model_len": null,
+  "miniserve_version": "0.1.0",
+  "num_requests": 6,
+  "policies": [
+    "serial",
+    "continuous"
+  ],
+  "prefill_seconds_per_token": 0.1,
+  "profile": "short",
+  "run_id": "simulation-short-seed1234",
+  "seed": 1234,
+  "simulation": true,
+  "workload": [
+    {
+      "arrival_time": 0.0,
+      "max_new_tokens": 5,
+      "prompt_length": 16,
+      "request_id": "short-001"
+    },
+    {
+      "arrival_time": 0.0,
+      "max_new_tokens": 2,
+      "prompt_length": 5,
+      "request_id": "short-002"
+    },
+    {
+      "arrival_time": 0.0,
+      "max_new_tokens": 6,
+      "prompt_length": 16,
+      "request_id": "short-003"
+    },
+    {
+      "arrival_time": 0.0,
+      "max_new_tokens": 7,
+      "prompt_length": 14,
+      "request_id": "short-004"
+    },
+    {
+      "arrival_time": 1.0,
+      "max_new_tokens": 8,
+      "prompt_length": 5,
+      "request_id": "short-005"
+    },
+    {
+      "arrival_time": 1.0,
+      "max_new_tokens": 2,
+      "prompt_length": 7,
+      "request_id": "short-006"
+    }
+  ]
+}
