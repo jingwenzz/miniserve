@@ -1,0 +1,4 @@
+{"decode_request_ids": [], "end_time": 1.5, "prefill_request_ids": ["sim-a", "sim-b"], "running_request_ids": [], "start_time": 0.0, "step": 1, "waiting_request_ids": ["sim-a", "sim-b"]}
+{"decode_request_ids": ["sim-a", "sim-b"], "end_time": 3.0, "prefill_request_ids": ["sim-c"], "running_request_ids": ["sim-a", "sim-b"], "start_time": 1.5, "step": 2, "waiting_request_ids": ["sim-c"]}
+{"decode_request_ids": ["sim-a", "sim-c"], "end_time": 4.0, "prefill_request_ids": [], "running_request_ids": ["sim-a", "sim-c"], "start_time": 3.0, "step": 3, "waiting_request_ids": []}
+{"decode_request_ids": ["sim-c"], "end_time": 4.5, "prefill_request_ids": [], "running_request_ids": ["sim-c"], "start_time": 4.0, "step": 4, "waiting_request_ids": []}
