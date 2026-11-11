@@ -1,0 +1,14 @@
+{
+  "architecture": "LlamaForCausalLM",
+  "attention_backend": "eager",
+  "decoding": "greedy",
+  "device": "cpu",
+  "dtype": "float32",
+  "license": "apache-2.0",
+  "model_id": "HuggingFaceTB/SmolLM2-135M",
+  "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+  "seed": 1234,
+  "stored_dtype": "bfloat16",
+  "tokenizer": "HuggingFaceTB/SmolLM2-135M",
+  "tokenizer_class": "GPT2TokenizerFast"
+}
