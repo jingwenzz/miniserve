@@ -131,3 +131,58 @@ logical relationships in this document, queue time, ordering of
 events, and which values are missing, carry over to a real backend.
 No number produced with the fake executor may be reported as model
 throughput or model latency.
+
+## 7. Frozen review: units, denominators, and counting rules
+
+This section was added at the second week review checkpoint and
+freezes the rules below for every later experiment, simulation or
+real. Changing any of them requires updating this section and
+saying so in the devlog.
+
+Units:
+
+- Every per request time value is in seconds: queue time, TTFT,
+  latency, and TPOT (seconds per token). In simulation runs the
+  seconds are logical seconds under the recorded cost model; in
+  later real runs they are seconds from the request clock. The
+  unit is the same, the clock is not, and the clock must be named
+  with any quoted number.
+- Throughput values are tokens per second or requests per second,
+  over a stated window, never a bare count.
+
+Denominators for the means in the experiment summary:
+
+| Mean | Numerator | Denominator |
+| --- | --- | --- |
+| Mean TTFT | Sum of TTFT over requests that produced at least one token | The number of those requests only |
+| Mean latency | Sum of latency over terminal requests (finished plus cancelled) | The number of terminal requests only |
+| Mean TPOT | Sum of TPOT over requests that produced at least two tokens | The number of those requests only |
+
+A request with a missing value never enters either side of a
+mean. It is not counted as zero and it does not enlarge the
+denominator, so a mean can always be read as the average over
+exactly the requests that earned that value.
+
+Counting rules:
+
+- Finished, cancelled, and unfinished are three separate counts
+  in every summary, and they add up to the number of exported
+  request records.
+- A request rejected at admission produces no metrics record at
+  all, because it was never admitted. Rejection counts, when they
+  matter, must be counted at the admission call site and reported
+  alongside the summary, never inferred from the records.
+- The current simulated output throughput numerator is the total
+  output tokens of all exported records, including tokens a
+  cancelled request produced before it was cancelled. In the
+  recorded runs every request finished, so this nuance changes
+  nothing there; any future run that contains cancelled requests
+  must state whether its throughput numerator includes their
+  tokens.
+- There is still no failed count, because there is still no
+  FAILED state. When a real executor adds one, failed requests
+  get their own count and their own denominator treatment here
+  before any real experiment is reported.
+- Percentiles are not computed anywhere yet. When they are added,
+  the sample, the percentile method, and the sample size must be
+  stated, and small samples must be labelled exploratory.

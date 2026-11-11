@@ -420,3 +420,63 @@ recomputing an unchanged directory reproduces the original
 summary exactly. The layout, the commands, and one recorded
 simulation comparison are in `docs/experiments.md`.
 
+## 14. Second week checkpoint
+
+Checked at the second week review by rerunning the full suite
+(90 passed), the demo (3 requests in 5 steps, unchanged), the
+type check, and the experiment pipeline end to end: recomputing
+the recorded run `simulation-short-seed1234` with
+`benchmarks/summarize.py` left `summary.json` and `summary.md`
+byte identical, verified by checksum.
+
+Fairness of the baseline, verified against the code rather than
+assumed:
+
+- Both policies replay the same workload specifications, rebuilt
+  into fresh request objects per policy, so no execution state
+  leaks from one run into the other.
+- Both use the same simulated executor, the same cost parameters,
+  the same scheduler limits, and the same stopping rule. The only
+  difference is the selection policy inside `schedule`.
+- Both produced the same work in the recorded run: 6 finished
+  requests and 30 output tokens each. Any later real comparison
+  must pass the same check, that the generated work is equal or
+  that any difference, such as an early EOS, is recorded, before
+  its timing numbers are compared.
+
+Why throughput and TTFT can move in opposite directions, in the
+terms of this project: the continuous policy admits a new request
+for prefill while earlier requests are still decoding, so a
+waiting request tends to see its first token earlier and mean
+TTFT falls. Under the current serial cost model, however, the
+work inside a shared step is charged one request after another,
+so a request sharing steps with others can still finish later
+than it would have alone, and mean latency rises. Both effects
+appeared in the recorded run (mean TTFT 9.2167 against 10.3167,
+mean latency 15.8167 against 12.3167, in logical seconds). A real
+batched backend executes a shared step differently, so the
+direction and size of this trade off must be measured again with
+the real executor; the simulation establishes the mechanism and
+the vocabulary, not the real numbers.
+
+Open items carried forward, in priority order: the FAILED state
+decision must be revisited when the real executor introduces a
+real failure path; resident cache capacity is still distinguished
+but not enforced, and becomes a concrete question once a real
+cache exists; the first token source changes with a real backend,
+because prefill logits can produce the first token, and
+`docs/metrics.md` already records that this change must be
+documented when it happens. None of these block the real model
+selection that comes next.
+
+Model selection conditions, listed before any model was picked:
+decoder only and small (roughly 0.1B to 0.5B parameters); a
+permissive licence that allows this project to be published; a
+cache structure that is simple to explain, with no sliding window
+or hybrid attention in the first model; official support in the
+locked transformers version; a tokenizer shipped in the same
+repository; a revision that can be pinned; and runnable on the
+machine actually available here, which has no GPU, so CPU
+execution within the memory budget is a hard condition, not a
+preference.
+
