@@ -480,3 +480,35 @@ machine actually available here, which has no GPU, so CPU
 execution within the memory budget is a hard condition, not a
 preference.
 
+## 15. Real executor integration checkpoint
+
+The hand written generation loop is now verified against the
+reference path and wired into the engine as a real executor.
+
+Correctness, from `benchmarks/correctness.py` and its saved
+record `benchmarks/correctness_output.json`: 12 fixed cases
+(single token limit, short and multi token prompts, a 121 token
+long prompt, EOS cases) matched the reference token for token
+with no first divergence, and stop reasons agreed everywhere.
+The real EOS token never appeared in any probe or case, so EOS
+stopping on the real model was checked with a shared custom EOS
+id on both paths, and a literal near limit (8,192 position) run
+was not attempted on this CPU machine. Both limits are recorded
+in `docs/generation.md` section 5 rather than smoothed over.
+
+Integration, in `src/miniserve/real_executor.py`: the executor
+implements the section 8 protocol unchanged, one request per
+forward. Prefill appends the first token from its logits, so
+first token time is recorded at prefill completion, the real
+source `docs/metrics.md` anticipated. Decode appends one token
+per call after that, so N tokens take 1 prefill and N - 1 decode
+forwards, and a limit of 1 takes no decode forward, verified both
+by scripted fake model tests and by real runs through
+`benchmarks/real_generate.py` (the default run finished in 16
+steps with ids identical to the reference). The executor owns
+finishing a request on EOS, stores exactly one cache per active
+request, and drops it in `release`; after every recorded run the
+active cache count was zero. A model error still propagates with
+no invented terminal state, so the FAILED state question stays
+open until a failure path is deliberately exercised, which is
+the next scheduled item together with cache release checks.

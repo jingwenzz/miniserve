@@ -49,11 +49,10 @@ This settles a semantic difference the metrics document flagged
 earlier: the fake executor produces its first token inside decode,
 while the real model produces it inside prefill. For a real
 backend, the first token time is therefore the moment the prefill
-forward completes. The fake and real conventions are not silently
-mixed: unifying the event and metrics handling around the real
-convention is part of wiring the real executor into the engine,
-and until then the two backends keep the convention each one
-actually implements.
+forward completes. The two backends keep the convention each one
+actually implements, and neither is silently mixed into the
+other; the real executor wiring that records the first token at
+prefill completion is described in section 6.
 
 ## 3. The hand written decode loop
 
@@ -103,9 +102,82 @@ input, cache growth, the off by one, EOS and limit stopping) is
 also covered without the model by tests/test_manual_generate.py,
 which drives the loop with a fake scripted model.
 
-This is a single prompt check, recorded as such. A broader
-correctness pass across several prompts, including EOS and near
-limit cases against the reference path, is a separate scheduled
-step and has not been done yet. No timing from these scripts is a
-performance result; they run on a shared CPU and exist to make
-the mechanics checkable.
+At the time that was written this was a single prompt check. The
+broader correctness pass has since been run and is recorded in
+section 5 below, and the loop has since been wired into the
+engine as a real executor, recorded in section 6. No timing from
+these scripts is a performance result; they run on a shared CPU
+and exist to make the mechanics checkable.
+
+## 5. Correctness pass across prompts
+
+`benchmarks/correctness.py` runs both paths, reference
+`generate` and the hand written loop, over 12 fixed cases with
+the same model, tokenizer, dtype, and greedy stopping rules, and
+saves the full record in `benchmarks/correctness_output.json`.
+The cases cover a one token limit, a three token limit, a one
+token prompt, several multi token prompts of different kinds
+(story opening, question and answer, arithmetic, list
+continuation), a long prompt of 121 tokens built by repeating one
+sentence, and the two EOS cases described below.
+
+Result: all 12 cases matched exactly, token for token, with no
+first divergence in any case, and the stop reasons agreed in
+every case (the limit in 11 cases, EOS in the custom EOS case).
+No floating point divergence was observed, so there is no
+divergence to attribute: under float32, eager attention, and
+greedy decoding on this CPU, the two paths are token identical on
+this case set. That is a statement about these 12 cases, not a
+proof for every prompt.
+
+Two honest limits of the pass:
+
+- The real EOS token (id 0) never appeared. While preparing the
+  pass, 16 probe prompts were run with a 32 token limit and none
+  produced token 0, and in the pass itself the search case ran 48
+  tokens without producing it either; the output record marks
+  `real_eos_appeared` false for all 12 cases. EOS stopping on the
+  real model is therefore verified with a shared custom EOS id:
+  both paths were given EOS id 198, a token the reference prompt
+  produces as its seventh token, and both stopped there with the
+  identical seven tokens ending in 198. EOS id 0 stopping inside
+  the loop itself is covered by the scripted fake model tests.
+- The long prompt case is 121 tokens, not a run near the 8,192
+  position limit. A literal near limit prefill was not attempted
+  on this CPU only machine; the 121 token case exercises the same
+  mask and position path at a larger length, and the record does
+  not claim more than that.
+
+## 6. The loop as an engine executor
+
+`src/miniserve/real_executor.py` turns the same bookkeeping into
+a `RealExecutor` that implements the executor protocol, so the
+scheduler and the engine are unchanged. Each forward still
+processes one request only. Prefill runs the prompt once, stores
+the cache under the request id, and appends the first token from
+the prefill logits, which settles the convention this document
+flagged in section 2: for the real backend the first token time
+is the prefill completion moment, recorded by the same
+`append_token` call the fake backend's decode uses, so the
+metrics definition in `docs/metrics.md` now has its documented
+real source. Decode feeds the most recent generated token and
+appends the produced one; a run of N tokens takes one prefill
+forward and N - 1 decode forwards, and a limit of one takes no
+decode forward. A produced EOS token finishes the request in the
+executor, because the generic request type only finishes on the
+output limit, and the EOS token is never fed back. `release`
+drops the stored cache for the request and is idempotent; the
+engine owns when it runs.
+
+`benchmarks/real_generate.py` is the command line entry point:
+one prompt goes through a batch size one scheduler and the engine
+and prints the text plus the per request metrics. Recorded runs,
+saved in `benchmarks/real_generate_output.json` for the default
+prompt: the default 16 token run finished in 16 engine steps (1
+prefill forward, 15 decode forwards) with token ids identical to
+the reference run, no cache left afterwards, and the request
+released; a limit of 1 finished in 1 step with 0 decode forwards;
+a second prompt (`Hello`, 4 tokens) also finished with its cache
+released. The metrics in that file are wall clock engine times
+on this shared CPU, recorded as observed values, not as a
+performance result.
