@@ -1,0 +1,124 @@
+{
+  "all_clean": true,
+  "kind": "scripted_model_diagnostic",
+  "real_model_loaded": false,
+  "scenarios": [
+    {
+      "active_caches_after": 0,
+      "clean": true,
+      "error_propagated": null,
+      "failure_reason": null,
+      "finish_reason": "finished",
+      "generated_token_ids": [
+        7,
+        8
+      ],
+      "released_request_ids": [
+        "normal-0"
+      ],
+      "request_id": "normal-0",
+      "scenario": "normal_sequential",
+      "state": "FINISHED"
+    },
+    {
+      "active_caches_after": 0,
+      "clean": true,
+      "error_propagated": null,
+      "failure_reason": null,
+      "finish_reason": "finished",
+      "generated_token_ids": [
+        7,
+        8
+      ],
+      "released_request_ids": [
+        "normal-0",
+        "normal-1"
+      ],
+      "request_id": "normal-1",
+      "scenario": "normal_sequential",
+      "state": "FINISHED"
+    },
+    {
+      "active_caches_after": 0,
+      "clean": true,
+      "error_propagated": null,
+      "failure_reason": null,
+      "finish_reason": "finished",
+      "generated_token_ids": [
+        7,
+        8
+      ],
+      "released_request_ids": [
+        "normal-0",
+        "normal-1",
+        "normal-2"
+      ],
+      "request_id": "normal-2",
+      "scenario": "normal_sequential",
+      "state": "FINISHED"
+    },
+    {
+      "active_caches_after": 0,
+      "clean": true,
+      "error_propagated": null,
+      "failure_reason": null,
+      "finish_reason": "finished",
+      "generated_token_ids": [
+        0
+      ],
+      "released_request_ids": [
+        "eos-1"
+      ],
+      "request_id": "eos-1",
+      "scenario": "eos_from_prefill",
+      "state": "FINISHED"
+    },
+    {
+      "active_caches_after": 0,
+      "active_caches_before_cancel": 1,
+      "clean": true,
+      "error_propagated": null,
+      "failure_reason": null,
+      "finish_reason": "cancelled",
+      "generated_token_ids": [
+        7
+      ],
+      "released_request_ids": [
+        "cancel-1"
+      ],
+      "request_id": "cancel-1",
+      "scenario": "cancel_running",
+      "state": "CANCELLED"
+    },
+    {
+      "active_caches_after": 0,
+      "clean": true,
+      "error_propagated": "injected model failure",
+      "failure_reason": "prefill forward failed: RuntimeError: injected model failure",
+      "finish_reason": "failed",
+      "generated_token_ids": [],
+      "released_request_ids": [
+        "prefill_failure-1"
+      ],
+      "request_id": "prefill_failure-1",
+      "scenario": "prefill_failure",
+      "state": "FAILED"
+    },
+    {
+      "active_caches_after": 0,
+      "clean": true,
+      "error_propagated": "injected model failure",
+      "failure_reason": "decode forward failed: RuntimeError: injected model failure",
+      "finish_reason": "failed",
+      "generated_token_ids": [
+        7
+      ],
+      "released_request_ids": [
+        "decode_failure-1"
+      ],
+      "request_id": "decode_failure-1",
+      "scenario": "decode_failure",
+      "state": "FAILED"
+    }
+  ]
+}
