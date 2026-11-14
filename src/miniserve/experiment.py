@@ -197,6 +197,7 @@ def _policy_summary(run_dir: Path, policy: str) -> dict[str, object]:
 
     finished = 0
     cancelled = 0
+    failed = 0
     unfinished = 0
     total_output_tokens = 0
     total_prompt_tokens = 0
@@ -209,6 +210,8 @@ def _policy_summary(run_dir: Path, policy: str) -> dict[str, object]:
             finished += 1
         elif reason == "cancelled":
             cancelled += 1
+        elif reason == "failed":
+            failed += 1
         elif reason is None:
             unfinished += 1
         else:
@@ -239,6 +242,7 @@ def _policy_summary(run_dir: Path, policy: str) -> dict[str, object]:
         "requests": len(request_rows),
         "finished": finished,
         "cancelled": cancelled,
+        "failed": failed,
         "unfinished": unfinished,
         "total_output_tokens": total_output_tokens,
         "total_prompt_tokens": total_prompt_tokens,
@@ -270,11 +274,11 @@ def _summary_markdown(summary: dict[str, object]) -> str:
         "recorded in config.json. They are not measured model or GPU times.",
         "",
         (
-            "| Policy | Finished | Cancelled | Unfinished | Output tokens "
+            "| Policy | Finished | Cancelled | Failed | Unfinished | Output tokens "
             "| Steps | Simulated duration | Mean TTFT | Mean latency "
             "| Mean TPOT | Simulated output tokens per second |"
         ),
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for policy, stats in policies.items():
         row = cast("dict[str, object]", stats)
@@ -285,6 +289,7 @@ def _summary_markdown(summary: dict[str, object]) -> str:
                     policy,
                     _format_value(row["finished"]),
                     _format_value(row["cancelled"]),
+                    _format_value(row["failed"]),
                     _format_value(row["unfinished"]),
                     _format_value(row["total_output_tokens"]),
                     _format_value(row["steps"]),

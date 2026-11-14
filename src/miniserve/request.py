@@ -12,6 +12,7 @@ class RequestState(Enum):
     DECODING = auto()
     FINISHED = auto()
     CANCELLED = auto()
+    FAILED = auto()
 
 
 @dataclass
@@ -29,6 +30,7 @@ class Request:
     admission_time: float | None = None
     prefill_start_time: float | None = None
     last_token_time: float | None = None
+    failure_reason: str | None = None
     clock: Clock = field(default=monotonic, repr=False, compare=False)
 
     def __post_init__(self) -> None:
@@ -62,6 +64,7 @@ class Request:
         return self.state in {
             RequestState.FINISHED,
             RequestState.CANCELLED,
+            RequestState.FAILED,
         }
 
     @property
@@ -70,6 +73,8 @@ class Request:
             return "finished"
         if self.state is RequestState.CANCELLED:
             return "cancelled"
+        if self.state is RequestState.FAILED:
+            return "failed"
         return None
 
     def mark_admitted(self) -> None:
@@ -132,4 +137,26 @@ class Request:
             )
 
         self.state = RequestState.CANCELLED
+        self.finished_time = self.clock()
+
+    def fail(self, reason: str) -> None:
+        """Move a non terminal request to FAILED with a recorded reason.
+
+        This is the terminal outcome for an execution error after
+        admission. It is distinct from FINISHED and CANCELLED, it
+        keeps any tokens already produced, and it records the
+        reason text the executor supplied so a failure can be
+        reported instead of guessed at later. Failing a request
+        that already reached a terminal state is an error, so a
+        late failure can never overwrite a real outcome.
+        """
+        if self.is_finished:
+            raise RuntimeError(
+                f"Cannot fail request from state {self.state.name}"
+            )
+        if not reason:
+            raise ValueError("failure reason must not be empty")
+
+        self.state = RequestState.FAILED
+        self.failure_reason = reason
         self.finished_time = self.clock()

@@ -19,8 +19,12 @@ from miniserve.request import Request, RequestState
 #   each request it tracked, after that request reaches a terminal
 #   state. The executor must make release idempotent.
 # - If prefill or decode raises, the exception propagates to the
-#   engine caller. The executor leaves the request in whatever state
-#   it reached; the engine does not invent a terminal state for it.
+#   engine caller. An executor that knows which request its work
+#   failed on moves that request to FAILED with a recorded reason
+#   before the exception propagates; the engine then cleans up the
+#   step, releases terminal requests, and re raises. The engine
+#   does not invent a terminal state for a request the executor
+#   did not mark.
 
 
 class Executor(Protocol):

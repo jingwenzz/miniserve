@@ -20,6 +20,7 @@ class RequestMetrics:
     request_id: str
     state: str
     finish_reason: str | None
+    failure_reason: str | None
     prompt_length: int
     output_length: int
     max_new_tokens: int
@@ -61,6 +62,7 @@ def summarize_request(request: Request) -> RequestMetrics:
         request_id=request.request_id,
         state=request.state.name,
         finish_reason=request.finish_reason,
+        failure_reason=request.failure_reason,
         prompt_length=request.prompt_length,
         output_length=request.output_length,
         max_new_tokens=request.max_new_tokens,
@@ -103,10 +105,10 @@ def write_jsonl(requests: Iterable[Request], path: Path) -> None:
 def count_by_finish_reason(requests: Iterable[Request]) -> dict[str, int]:
     """Count terminal outcomes separately, with unfinished apart.
 
-    Finished and cancelled are never merged. A request that is not
-    terminal yet counts under the key unfinished.
+    Finished, cancelled, and failed are never merged. A request
+    that is not terminal yet counts under the key unfinished.
     """
-    counts = {"finished": 0, "cancelled": 0, "unfinished": 0}
+    counts = {"finished": 0, "cancelled": 0, "failed": 0, "unfinished": 0}
     for request in requests:
         reason = request.finish_reason
         if reason is None:

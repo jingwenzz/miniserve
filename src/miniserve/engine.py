@@ -62,8 +62,21 @@ class Engine:
         self._track(output.prefill_requests)
         self._track(output.decode_requests)
 
-        self.executor.prefill(output.prefill_requests)
-        self.executor.decode(output.decode_requests)
+        try:
+            self.executor.prefill(output.prefill_requests)
+            self.executor.decode(output.decode_requests)
+        except Exception:
+            # An executor that knows which request failed has
+            # already moved that request to FAILED (see the
+            # executor contract). Clean up this step the same way
+            # a normal step ends, so a failed request leaves its
+            # queue and its backend resources are released, then
+            # let the original exception reach the caller instead
+            # of hiding it. Requests that are not terminal keep
+            # the state they reached; no outcome is invented here.
+            self.scheduler.update(output)
+            self.release_terminal_requests()
+            raise
 
         self.scheduler.update(output)
         self.release_terminal_requests()

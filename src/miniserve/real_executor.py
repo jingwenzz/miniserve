@@ -35,11 +35,16 @@ that entry and nothing else; it is idempotent, and the engine owns
 when it is called. After release the executor holds no reference
 to the request's cache.
 
-If a model forward raises, the exception propagates to the engine
-caller, as the executor contract requires. No terminal state is
-invented for the request; it stays in whatever state it reached,
-and any cache stored for it stays stored until a release call, so
-the failure remains visible instead of being silently cleaned up.
+If a model forward raises, this executor moves the request whose
+forward failed to FAILED with the exception recorded as its
+failure reason, and the exception then propagates to the engine
+caller, as the executor contract requires. The engine cleans up
+the step and releases the failed request, which drops its cache
+here, so a failure ends the request and frees its resources
+without hiding the original error. A forward that never ran, such
+as a decode call rejected because the request holds no cache,
+raises without marking the request, because that is a caller bug,
+not a model failure.
 """
 
 from typing import Any
@@ -77,18 +82,26 @@ class RealExecutor:
         for request in requests:
             request.start_prefill()
             prompt_length = len(request.prompt_token_ids)
-            with torch.inference_mode():
-                input_ids = torch.tensor(
-                    [request.prompt_token_ids], dtype=torch.long
+            try:
+                with torch.inference_mode():
+                    input_ids = torch.tensor(
+                        [request.prompt_token_ids], dtype=torch.long
+                    )
+                    attention_mask = torch.ones_like(input_ids)
+                    cache_position = torch.arange(
+                        prompt_length, dtype=torch.long
+                    )
+                    output = self.model(
+                        input_ids=input_ids,
+                        attention_mask=attention_mask,
+                        use_cache=True,
+                        cache_position=cache_position,
+                    )
+            except Exception as exc:
+                request.fail(
+                    f"prefill forward failed: {type(exc).__name__}: {exc}"
                 )
-                attention_mask = torch.ones_like(input_ids)
-                cache_position = torch.arange(prompt_length, dtype=torch.long)
-                output = self.model(
-                    input_ids=input_ids,
-                    attention_mask=attention_mask,
-                    use_cache=True,
-                    cache_position=cache_position,
-                )
+                raise
             self.prefill_forward_count += 1
             self._caches[request.request_id] = output.past_key_values
             first_token = self._greedy_next_token(output.logits[0, -1])
@@ -117,21 +130,29 @@ class RealExecutor:
                 )
             cache_length_before = int(cache.get_seq_length())
             next_input_token = request.generated_token_ids[-1]
-            with torch.inference_mode():
-                input_ids = torch.tensor([[next_input_token]], dtype=torch.long)
-                attention_mask = torch.ones(
-                    (1, cache_length_before + 1), dtype=torch.long
+            try:
+                with torch.inference_mode():
+                    input_ids = torch.tensor(
+                        [[next_input_token]], dtype=torch.long
+                    )
+                    attention_mask = torch.ones(
+                        (1, cache_length_before + 1), dtype=torch.long
+                    )
+                    cache_position = torch.tensor(
+                        [cache_length_before], dtype=torch.long
+                    )
+                    output = self.model(
+                        input_ids=input_ids,
+                        attention_mask=attention_mask,
+                        past_key_values=cache,
+                        use_cache=True,
+                        cache_position=cache_position,
+                    )
+            except Exception as exc:
+                request.fail(
+                    f"decode forward failed: {type(exc).__name__}: {exc}"
                 )
-                cache_position = torch.tensor(
-                    [cache_length_before], dtype=torch.long
-                )
-                output = self.model(
-                    input_ids=input_ids,
-                    attention_mask=attention_mask,
-                    past_key_values=cache,
-                    use_cache=True,
-                    cache_position=cache_position,
-                )
+                raise
             self.decode_forward_count += 1
             self._caches[request.request_id] = output.past_key_values
             produced = self._greedy_next_token(output.logits[0, -1])
