@@ -3,6 +3,7 @@
   "policies": {
     "continuous": {
       "cancelled": 0,
+      "failed": 0,
       "finished": 6,
       "mean_latency": 15.816666666666668,
       "mean_tpot": 1.6491269841269842,
@@ -17,6 +18,7 @@
     },
     "serial": {
       "cancelled": 0,
+      "failed": 0,
       "finished": 6,
       "mean_latency": 12.316666666666668,
       "mean_tpot": 0.5,
