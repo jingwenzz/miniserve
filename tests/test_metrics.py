@@ -109,6 +109,7 @@ def test_cancelled_waiting_request_counts_separately() -> None:
     assert count_by_finish_reason([request]) == {
         "finished": 0,
         "cancelled": 1,
+        "failed": 0,
         "unfinished": 0,
     }
 
@@ -156,6 +157,7 @@ def test_unfinished_request_exports_nulls_not_zeros() -> None:
     assert count_by_finish_reason([request]) == {
         "finished": 0,
         "cancelled": 0,
+        "failed": 0,
         "unfinished": 1,
     }
 
