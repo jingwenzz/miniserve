@@ -181,3 +181,69 @@ a second prompt (`Hello`, 4 tokens) also finished with its cache
 released. The metrics in that file are wall clock engine times
 on this shared CPU, recorded as observed values, not as a
 performance result.
+
+## 7. Stop, failure, and cache release
+
+Every terminal path of the real executor now has a checked cache
+outcome, verified by `tests/test_cache_cleanup.py` and the
+diagnostic `benchmarks/cache_cleanup_check.py`, whose saved
+record is `benchmarks/cache_cleanup_output.json`:
+
+- Finish by limit and stop by EOS: the engine releases the
+  request at the end of its final step and the executor drops its
+  cache, so the active cache count returns to zero. Five
+  sequential requests on one shared executor each started and
+  ended at zero, which is the check that an earlier request left
+  nothing behind for the next one.
+- Cancel while running: the request holds a cache between steps,
+  cancellation makes it terminal, and the engine sweep releases
+  it without another model forward.
+- Failure: a model forward that raises marks exactly its own
+  request FAILED with the stage and exception recorded, the
+  engine cleans up the step and releases it, and the original
+  exception still reaches the caller. A prefill failure ends with
+  no tokens; a decode failure keeps the tokens produced before
+  it. In both cases the active cache count returns to zero and a
+  waiting request behind the failing one stays untouched.
+
+Release means dropping the executor reference to that request
+cache object. It is not a call that empties a framework allocator
+pool, and reserved memory a framework keeps for reuse must not be
+read as a leaked per request cache. This machine has no GPU, so
+the checkable quantity here is the executor active cache count,
+not a GPU memory reading.
+
+## 8. Cache structure, recorded before the batching work
+
+Measured at the third week review on the locked transformers
+version (4.57.6) with one prefill of the five token reference
+prompt, so the batching design that follows starts from observed
+shapes rather than assumptions:
+
+- The forward returns `past_key_values` as a `DynamicCache`
+  (`transformers.cache_utils`) holding a list of 30 layers, one
+  `DynamicLayer` per model layer. There is no legacy `key_cache`
+  or `value_cache` attribute list on this object in this version;
+  each layer exposes its tensors as `keys` and `values`, and the
+  legacy tuple view still works per layer (indexing one layer
+  gives its key and value tensors as a pair).
+- Every layer has the same shape for this run: keys and values
+  are each [1, 3, 5, 64] in float32, which is batch 1, 3 key value
+  heads, 5 positions (the prompt, nothing more), head size 64.
+- `get_seq_length()` on the whole cache and on a layer both
+  report the cached position count (5 here), which is what the
+  real executor reads before a decode step.
+- The cache object advertises batch level helpers in this
+  version, including `batch_repeat_interleave`,
+  `batch_select_indices`, and `reorder_cache`. They are recorded
+  here as an observed API surface only: nothing in the current
+  code calls them, and whether the batching design uses them or
+  packs per request caches by hand is the next design decision,
+  to be made against these shapes.
+
+The batch dimension is the first axis of every layer tensor and
+is 1 everywhere today, because each forward processes one
+request. Making that axis carry several requests, with different
+valid lengths per row, is exactly the problem the batching stage
+has to solve, and any layout it chooses must keep each row valid
+length, mask, and next position aligned with the numbers above.

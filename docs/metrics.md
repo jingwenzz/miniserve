@@ -22,7 +22,7 @@ be recomputed from them, so a summary never has to guess.
 | `prefill_start_time` | The request starts its first model execution, meaning prefill begins. This is the end of queue waiting as defined below. | `Request.start_prefill` |
 | `first_token_time` | The first generated token becomes available for this request. With the fake executor this is the first decode append, because its prefill produces no token. A real backend that produces the first token from prefill logits must record that moment here instead, and that change of source must be documented when it happens. | `Request.append_token`, first call |
 | `last_token_time` | The most recent generated token becomes available. For a one token request it equals `first_token_time`. | `Request.append_token`, every call |
-| `finished_time` | The request reaches a terminal state, `FINISHED` or `CANCELLED`. For a request that finishes by reaching its output limit, this is recorded in the same append step as the last token. | `Request.finish` or `Request.cancel` |
+| `finished_time` | The request reaches a terminal state, `FINISHED`, `CANCELLED`, or `FAILED`. For a request that finishes by reaching its output limit, this is recorded in the same append step as the last token. | `Request.finish`, `Request.cancel`, or `Request.fail` |
 
 Rules:
 
@@ -76,10 +76,15 @@ document only fixes the per request values they are computed from.
   `finish_reason` equal to `None` and latency equal to `None`.
   They are not counted as finished or cancelled, and their missing
   values are exported as `null` in JSON, not as zero.
-- There is still no `FAILED` state at this checkpoint, for the same
-  reason recorded in `docs/design.md`. When a real executor adds a
-  failure path, failed requests must get their own reason and their
-  own count, distinct from both finished and cancelled.
+- `FAILED` requests carry `finish_reason` equal to `failed` and the
+  recorded `failure_reason` text the executor supplied, exported as
+  its own field. They are counted separately from finished and
+  cancelled in every summary. A failed request keeps the tokens and
+  timestamps it earned before the failure, so its latency is the
+  time until the failure and its TTFT is reported when it produced
+  a token. This state was added when the real executor gained a
+  deliberately injected failure path, as `docs/design.md` section
+  16 records.
 
 ## 4. Engine time and client time
 
@@ -155,7 +160,7 @@ Denominators for the means in the experiment summary:
 | Mean | Numerator | Denominator |
 | --- | --- | --- |
 | Mean TTFT | Sum of TTFT over requests that produced at least one token | The number of those requests only |
-| Mean latency | Sum of latency over terminal requests (finished plus cancelled) | The number of terminal requests only |
+| Mean latency | Sum of latency over terminal requests (finished, cancelled, and failed) | The number of terminal requests only |
 | Mean TPOT | Sum of TPOT over requests that produced at least two tokens | The number of those requests only |
 
 A request with a missing value never enters either side of a
@@ -165,9 +170,9 @@ exactly the requests that earned that value.
 
 Counting rules:
 
-- Finished, cancelled, and unfinished are three separate counts
-  in every summary, and they add up to the number of exported
-  request records.
+- Finished, cancelled, failed, and unfinished are four separate
+  counts in every summary, and they add up to the number of
+  exported request records.
 - A request rejected at admission produces no metrics record at
   all, because it was never admitted. Rejection counts, when they
   matter, must be counted at the admission call site and reported
@@ -179,10 +184,12 @@ Counting rules:
   nothing there; any future run that contains cancelled requests
   must state whether its throughput numerator includes their
   tokens.
-- There is still no failed count, because there is still no
-  FAILED state. When a real executor adds one, failed requests
-  get their own count and their own denominator treatment here
-  before any real experiment is reported.
+- Failed requests have their own count, added when the real
+  executor gained its failure path. For mean latency, a failed
+  request is a terminal request, so it enters the latency mean
+  under the terminal rule above with its time until failure; no
+  simulation run recorded so far contains a failed request, so
+  no recorded mean changes.
 - Percentiles are not computed anywhere yet. When they are added,
   the sample, the percentile method, and the sample size must be
   stated, and small samples must be labelled exploratory.

@@ -12,6 +12,8 @@ A request moves through these states:
 WAITING -> PREFILLING -> DECODING -> FINISHED
    |           |            |
    +-----------+------------+------> CANCELLED
+   |           |            |
+   +-----------+------------+------> FAILED
 ```
 
 - `WAITING`: the request has been admitted and is in the waiting queue.
@@ -25,6 +27,10 @@ WAITING -> PREFILLING -> DECODING -> FINISHED
   terminal state.
 - `CANCELLED`: the request was cancelled before finishing. This is a
   terminal state.
+- `FAILED`: an executor forward for this request raised after the
+  request was admitted. This is a terminal state, distinct from both
+  finishing and cancelling, and the request carries the recorded
+  `failure_reason` text the executor supplied.
 
 Rules for transitions:
 
@@ -35,26 +41,26 @@ Rules for transitions:
   the normal output path.
 - A request in `WAITING`, `PREFILLING`, or `DECODING` may be cancelled.
   A terminal request cannot be cancelled again.
-- `FINISHED` and `CANCELLED` requests never execute again and never
-  produce new tokens.
+- `FINISHED`, `CANCELLED`, and `FAILED` requests never execute again
+  and never produce new tokens.
 
 ### Decision on a FAILED state and a failure reason
 
-No `FAILED` state is added at this checkpoint.
-
-Reason: there is currently no runtime failure path in the fake
-executor, so a `FAILED` state added now would be unreachable and
-untested. Admission problems are different from runtime failures.
-A request that can never run is rejected synchronously when it is
-offered to the scheduler (see section 4), before the scheduler takes
-ownership of it, so it does not need a terminal state to describe it.
-
-This decision must be revisited when a real executor is introduced.
-At that point an execution error after admission needs a terminal
-outcome that is distinct from both normal completion and caller
-cancellation, together with a recorded failure reason. Until then,
-callers must not treat `FINISHED` or `CANCELLED` as a place to hide
-execution errors.
+A `FAILED` state with a recorded failure reason exists now. It was
+deliberately deferred while only the fake executor existed, because
+a state with no reachable failure path would have been unreachable
+and untested, and it was added when the real executor gained a
+deliberately injected failure path that could exercise it (see
+section 16). Admission problems stay different from runtime
+failures: a request that can never run is rejected synchronously
+when it is offered to the scheduler (see section 4), before the
+scheduler takes ownership of it, so it does not need a terminal
+state to describe it. An execution error after admission does:
+the executor that ran the failing forward moves that one request
+to `FAILED` through `Request.fail`, recording the exception as its
+`failure_reason`, and the original exception still propagates to
+the caller. Callers must not treat `FINISHED` or `CANCELLED` as a
+place to hide execution errors.
 
 ## 2. Queue ownership and invariants
 
@@ -279,13 +285,16 @@ Responsibility is split once, not duplicated:
   drives release correctly.
 
 Failure responsibility: if `prefill` or `decode` raises, the
-exception propagates to the caller of the engine. The request is
-left in whatever state the executor reached, the scheduler
-`update` for that step does not run, and no release is invented for
-a request that is not terminal. There is still no FAILED state at
-this checkpoint (see section 1); giving execution failures a
-terminal state and a recorded reason remains future work for when
-a real executor introduces a real failure path.
+exception propagates to the caller of the engine. An executor that
+knows which request its forward failed on moves that request to
+`FAILED` with a recorded reason before the exception propagates
+(see section 1). The engine then still runs the scheduler
+`update` for that step and releases every tracked request that
+reached a terminal state, so a failed request leaves its queue
+and its backend resources are freed, before the original exception
+is re raised. No release is invented for a request that is not
+terminal, and the engine does not invent a terminal state for a
+request the executor did not mark.
 
 What a real backend swap changes and does not change: a real
 executor must implement the same three methods, produce the first
@@ -512,3 +521,100 @@ active cache count was zero. A model error still propagates with
 no invented terminal state, so the FAILED state question stays
 open until a failure path is deliberately exercised, which is
 the next scheduled item together with cache release checks.
+
+## 16. Stop, failure, and cache release checkpoint
+
+That failure path has now been deliberately exercised, and the
+FAILED question from sections 1, 8, and 15 is settled.
+
+What exists now:
+
+- `RequestState.FAILED` is a third terminal state. `Request.fail`
+  moves any non terminal request there, records the supplied
+  reason in `failure_reason`, and stamps `finished_time` from the
+  request clock. Failing a terminal request is an error, so a late
+  failure cannot overwrite a finished, cancelled, or earlier
+  failed outcome, and a failed request keeps the tokens it already
+  produced.
+- `RealExecutor` wraps each model forward. A forward that raises
+  marks exactly the request it was running as FAILED, with the
+  stage and the exception in the reason (for example, prefill
+  forward failed or decode forward failed), and then re raises.
+  A decode call rejected before any forward ran, such as a missing
+  cache, still raises without marking, because that is a caller
+  bug, not a model failure.
+- `Engine.step` cleans up a failed step before re raising: the
+  scheduler update runs and terminal requests are released, so a
+  failed request leaves its queue and the executor drops its
+  cache. A waiting request behind the failing one is untouched and
+  stays WAITING.
+- Metrics count failed separately. `summarize_request` exports
+  `finish_reason` failed plus the `failure_reason` text, and
+  `count_by_finish_reason` and the experiment summary both carry a
+  failed count alongside finished, cancelled, and unfinished.
+
+Verification, all with the scripted model in
+`tests/test_cache_cleanup.py` and the diagnostic in
+`benchmarks/cache_cleanup_check.py` (saved record
+`benchmarks/cache_cleanup_output.json`, all scenarios clean):
+five sequential requests on one shared executor each returned the
+active cache count to zero; a prefill failure produced a FAILED
+request with no tokens and no cache left; a decode failure kept
+its one produced token, ended FAILED, and released its cache; EOS
+from prefill and a running cancellation released theirs as before.
+Release here means the executor drops its per request cache
+reference. It does not mean a framework allocator returns reserved
+memory, and no per request allocator emptying call is made; on
+this CPU only machine there is no GPU memory reading to report.
+
+## 17. Third week checkpoint and scope decision
+
+Checked at the third week review by rerunning the reference
+comparison, the real engine path, the full test suite, and a
+clean environment install:
+
+- Correctness: `benchmarks/correctness.py` again matched 12 of
+  12 cases token for token against the reference path, with stop
+  reasons agreeing everywhere and no first divergence. The real
+  EOS token again appeared in no case, so the EOS evidence stays
+  exactly what section 15 and `docs/generation.md` section 5 say
+  it is: the shared custom EOS comparison plus the scripted loop
+  tests. Nothing about that limit changed and nothing new is
+  claimed for it.
+- Real path: `benchmarks/real_generate.py` with its default
+  prompt finished in 16 steps (1 prefill forward, 15 decode
+  forwards) with token ids identical to
+  `benchmarks/reference_output.json`, an active cache count of
+  zero afterwards, and the request released.
+- Tests and types: the full suite passes (113 tests), mypy is
+  clean over the 10 source files, and the demo still finishes 3
+  requests in 5 steps.
+- Reproducible install: a fresh virtual environment created for
+  this check installed the project with the dev extra and passed
+  94 tests, with the 3 torch dependent test modules skipped
+  because the model extra was not installed there. That is the
+  expected split: the core and simulation suites need no model
+  download, and the model tests run in the main environment where
+  the model extra is installed.
+- Experiment pipeline after the failed count change: recomputing
+  the recorded run `simulation-short-seed1234` changed only the
+  summary schema (a failed column, zero everywhere, since that
+  run has no failed requests); every recorded number is unchanged
+  and a second recomputation is byte identical to the first.
+
+The single request relationship, stated once more in one place:
+prefill runs the whole prompt once and its last position logits
+produce the first token, so first token time is prefill
+completion. Decode then feeds one token at a time, the most
+recent generated token, which is the only token the cache has not
+seen, and each decode forward produces the next token. The cache
+therefore always trails the produced tokens by one position, and
+a run of N tokens takes 1 prefill and N minus 1 decode forwards.
+No unexplained single request output or cache behaviour remains.
+
+Scope decision: the single request checkpoint passes, so the
+batching work comes next as planned. If that work runs long, the
+cut order is fixed in advance: HTTP and extra charts are cut
+first, CLI and correctness checks are not. The cache structure
+recorded for the batching design is in `docs/generation.md`
+section 8.
