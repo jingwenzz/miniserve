@@ -3,10 +3,12 @@
 This document fixes one layout for running several requests in a
 single decode forward on the locked model (SmolLM2-135M, 30
 layers, 3 KV heads, head size 64, float32, eager attention,
-transformers 4.57.6). It is a design plus a measured feasibility
-probe, not yet a batched executor. Prefill stays per request for
-now, as the plan allows: each request prefills on its own, and
-only decode forwards are batched.
+transformers 4.57.6). It started as a design plus a measured
+feasibility probe; the equal length case is now implemented as
+recorded below, while different length rows still wait for the
+padding path. Prefill stays per request for now, as the plan
+allows: each request prefills on its own, and only decode
+forwards are batched.
 
 ## Decision
 
@@ -143,6 +145,44 @@ by 5). Recorded in `benchmarks/batch_layout_output.json`:
   1.9e-05, and the split caches differed from the individually
   updated caches by at most about 1.4e-05 across all layers,
   which is float batching noise, not a token divergence.
+
+## Implemented: equal length batched decode
+
+`src/miniserve/batched_executor.py` implements the first slice
+of this layout. `BatchedRealExecutor` extends the single request
+executor, inherits its per request prefill, and overrides only
+decode:
+
+- All requests in one decode call must hold caches of the same
+  valid length. Their caches are stacked along the batch axis
+  with concatenation, which for equal lengths is exactly the
+  pack step above with every padding count equal to zero.
+- One forward runs with input shape [B, 1], an all ones mask of
+  shape [B, L + 1], a shared `cache_position` of [L], and
+  `position_ids` of [B, 1] holding L per row (logical and
+  physical positions coincide when nothing is padded).
+- The updated batched cache is split back by taking row slices,
+  and each request appends the greedy token from its own logits
+  row. A failed batched forward marks every row FAILED, because
+  the forward was shared.
+- `decode_forward_count` counts forwards, not requests, and
+  `decode_batch_sizes` records the batch dimension of each
+  decode forward in order. Requests with different cache lengths
+  are rejected with a ValueError before any forward runs; they
+  are not silently run one by one.
+
+Measured on the real model by `benchmarks/batched_generate.py`,
+saved in `benchmarks/batched_generate_output.json`: prompts
+"The capital of France is" and "The capital of Italy is", both
+5 tokens, each limited to 8 new tokens. The batched run finished
+both requests in 8 engine steps with 2 prefill forwards and 7
+decode forwards, every decode batch size equal to 2, and the
+generated token ids matched the individual single request runs
+token for token for both prompts. The active cache count after
+the run was 0 and both requests were released. Scripted model
+tests in `tests/test_batched_executor.py` pin the same claims
+without the real model, including the unequal length rejection
+and the shared failure marking.
 
 ## Known costs and open items
 
