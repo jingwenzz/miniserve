@@ -1,0 +1,132 @@
+{
+  "all_tokens_match": true,
+  "batched": {
+    "active_caches_after_run": 0,
+    "decode_batch_sizes": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    "decode_forwards": 7,
+    "engine_steps": 8,
+    "prefill_forwards": 2,
+    "released_request_ids": [
+      "batch-0",
+      "batch-1"
+    ],
+    "requests": [
+      {
+        "generated_text": " the capital of the country.\n\n",
+        "generated_token_ids": [
+          260,
+          3575,
+          282,
+          260,
+          1798,
+          30,
+          198,
+          198
+        ],
+        "prompt_token_ids": [
+          504,
+          3575,
+          282,
+          4649,
+          314
+        ],
+        "request_id": "batch-0",
+        "state": "FINISHED"
+      },
+      {
+        "generated_text": " the city of Rome. It is the",
+        "generated_token_ids": [
+          260,
+          2240,
+          282,
+          7268,
+          30,
+          657,
+          314,
+          260
+        ],
+        "prompt_token_ids": [
+          504,
+          3575,
+          282,
+          7158,
+          314
+        ],
+        "request_id": "batch-1",
+        "state": "FINISHED"
+      }
+    ]
+  },
+  "decoding": "greedy",
+  "device": "cpu",
+  "dtype": "float32",
+  "individual": [
+    {
+      "active_caches_after_run": 0,
+      "decode_forwards": 7,
+      "generated_token_ids": [
+        260,
+        3575,
+        282,
+        260,
+        1798,
+        30,
+        198,
+        198
+      ],
+      "prefill_forwards": 1,
+      "prompt": "The capital of France is",
+      "prompt_token_ids": [
+        504,
+        3575,
+        282,
+        4649,
+        314
+      ],
+      "state": "FINISHED"
+    },
+    {
+      "active_caches_after_run": 0,
+      "decode_forwards": 7,
+      "generated_token_ids": [
+        260,
+        2240,
+        282,
+        7268,
+        30,
+        657,
+        314,
+        260
+      ],
+      "prefill_forwards": 1,
+      "prompt": "The capital of Italy is",
+      "prompt_token_ids": [
+        504,
+        3575,
+        282,
+        7158,
+        314
+      ],
+      "state": "FINISHED"
+    }
+  ],
+  "max_new_tokens": 8,
+  "model_id": "HuggingFaceTB/SmolLM2-135M",
+  "prompt_lengths": [
+    5,
+    5
+  ],
+  "prompts": [
+    "The capital of France is",
+    "The capital of Italy is"
+  ],
+  "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2"
+}
