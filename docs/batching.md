@@ -4,9 +4,10 @@ This document fixes one layout for running several requests in a
 single decode forward on the locked model (SmolLM2-135M, 30
 layers, 3 KV heads, head size 64, float32, eager attention,
 transformers 4.57.6). It started as a design plus a measured
-feasibility probe; the equal length case is now implemented as
-recorded below, while different length rows still wait for the
-padding path. Prefill stays per request for now, as the plan
+feasibility probe; both the equal length case and the padded
+different length case are now implemented as recorded below,
+and requests leave the batch dynamically when they finish or
+are cancelled. Prefill stays per request for now, as the plan
 allows: each request prefills on its own, and only decode
 forwards are batched.
 
@@ -167,9 +168,10 @@ decode:
   the forward was shared.
 - `decode_forward_count` counts forwards, not requests, and
   `decode_batch_sizes` records the batch dimension of each
-  decode forward in order. Requests with different cache lengths
-  are rejected with a ValueError before any forward runs; they
-  are not silently run one by one.
+  decode forward in order. This equal length path is the zero
+  padding special case of the general padded path described in
+  the next section, which replaced an earlier version that
+  rejected different length rows with a ValueError.
 
 Measured on the real model by `benchmarks/batched_generate.py`,
 saved in `benchmarks/batched_generate_output.json`: prompts
@@ -183,6 +185,65 @@ the run was 0 and both requests were released. Scripted model
 tests in `tests/test_batched_executor.py` pin the same claims
 without the real model, including the unequal length rejection
 and the shared failure marking.
+
+## Implemented: different length rows with padding
+
+The same executor now accepts rows whose caches hold different
+valid lengths, whether the difference comes from prompt length
+or from a different number of completed decode steps:
+
+- Packing left pads each shorter row with zeros to the longest
+  valid length in the step, exactly as designed above. The
+  attention mask for row i is zeros on its padding count, ones
+  on its valid past positions, and one on the current token, so
+  its shape is [B, L_max + 1] and padded keys never contribute
+  to attention.
+- `cache_position` stays the shared physical append slot
+  [L_max], while `position_ids` holds each row's own valid
+  length L_i, so rotary embeddings see logical positions and
+  padded length is never mistaken for a real position.
+- Splitting slices row i from its padding count to the end,
+  which keeps exactly its L_i + 1 valid positions after the
+  step. Scripted tests pin the mask and position values of a
+  lengths 2 and 5 step, a step where one request is one decode
+  ahead of the other, and the split cache lengths afterwards.
+
+Measured on the real model by
+`benchmarks/batched_unequal_generate.py`, saved in
+`benchmarks/batched_unequal_generate_output.json`: prompts of
+tokenized length 7 and 2 (five padding positions on the short
+row), each limited to 6 new tokens. The batched run finished
+both requests in 6 engine steps with 2 prefill forwards and 5
+decode forwards, every decode batch size equal to 2, and the
+generated token ids matched the individual single request runs
+token for token for both prompts. The active cache count after
+the run was 0 and both requests were released.
+
+## Implemented: leaving the batch
+
+A request leaves the batch by simply not being selected again:
+the scheduler only hands decoding requests to the executor, so
+a request that finished, failed, or was cancelled between steps
+drops out of the next pack, the row mapping is rebuilt from the
+surviving list in order, and the engine releases the leaving
+request's cache. Nothing about the layout changes for the
+survivors; each keeps its own valid length and logical
+positions. Scripted tests in `tests/test_batched_exit.py` cover
+a short first row finishing while a longer second row continues
+with exactly its individual token sequence, a one token request
+that finishes inside prefill and never enters a decode batch,
+and a running request cancelled mid batch while the other
+finishes untouched.
+
+Measured on the real model by
+`benchmarks/batched_exit_generate.py`, saved in
+`benchmarks/batched_exit_generate_output.json`: two prompts of
+equal length 5 with output limits 2 and 6. The batched run took
+6 engine steps with 5 decode forwards whose batch sizes were
+[2, 1, 1, 1, 1], the visible shrink after the first request
+finished, and both generated token sequences matched their
+individual runs. The active cache count after the run was 0 and
+both requests were released.
 
 ## Known costs and open items
 
