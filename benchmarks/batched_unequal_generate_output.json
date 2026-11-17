@@ -1,0 +1,121 @@
+{
+  "all_tokens_match": true,
+  "batched": {
+    "active_caches_after_run": 0,
+    "decode_batch_sizes": [
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    "decode_forwards": 5,
+    "engine_steps": 6,
+    "prefill_forwards": 2,
+    "released_request_ids": [
+      "batch-0",
+      "batch-1"
+    ],
+    "requests": [
+      {
+        "generated_text": ". It is the largest city",
+        "generated_token_ids": [
+          30,
+          657,
+          314,
+          260,
+          3995,
+          2240
+        ],
+        "prompt_token_ids": [
+          504,
+          3575,
+          282,
+          4649,
+          314,
+          281,
+          1910
+        ],
+        "request_id": "batch-0",
+        "state": "FINISHED"
+      },
+      {
+        "generated_text": "!\n\nI'm not",
+        "generated_token_ids": [
+          17,
+          198,
+          198,
+          57,
+          5248,
+          441
+        ],
+        "prompt_token_ids": [
+          19556,
+          905
+        ],
+        "request_id": "batch-1",
+        "state": "FINISHED"
+      }
+    ]
+  },
+  "decoding": "greedy",
+  "device": "cpu",
+  "dtype": "float32",
+  "individual": [
+    {
+      "active_caches_after_run": 0,
+      "decode_forwards": 5,
+      "generated_token_ids": [
+        30,
+        657,
+        314,
+        260,
+        3995,
+        2240
+      ],
+      "prefill_forwards": 1,
+      "prompt": "The capital of France is in Europe",
+      "prompt_token_ids": [
+        504,
+        3575,
+        282,
+        4649,
+        314,
+        281,
+        1910
+      ],
+      "state": "FINISHED"
+    },
+    {
+      "active_caches_after_run": 0,
+      "decode_forwards": 5,
+      "generated_token_ids": [
+        17,
+        198,
+        198,
+        57,
+        5248,
+        441
+      ],
+      "prefill_forwards": 1,
+      "prompt": "Hello world",
+      "prompt_token_ids": [
+        19556,
+        905
+      ],
+      "state": "FINISHED"
+    }
+  ],
+  "max_new_tokens": 6,
+  "model_id": "HuggingFaceTB/SmolLM2-135M",
+  "padding_positions_on_short_row": 5,
+  "prompt_lengths": [
+    7,
+    2
+  ],
+  "prompts": [
+    "The capital of France is in Europe",
+    "Hello world"
+  ],
+  "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2"
+}
