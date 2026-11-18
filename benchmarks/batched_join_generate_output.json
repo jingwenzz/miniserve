@@ -1,0 +1,230 @@
+{
+  "all_tokens_match": true,
+  "batched": {
+    "active_caches_after_run": 0,
+    "decode_batch_sizes": [
+      2,
+      2,
+      3,
+      3,
+      3
+    ],
+    "decode_forwards": 5,
+    "engine_steps": 6,
+    "prefill_forwards": 3,
+    "released_request_ids": [
+      "batch-0",
+      "batch-1",
+      "batch-2"
+    ],
+    "requests": [
+      {
+        "generated_text": " the capital of the country.",
+        "generated_token_ids": [
+          260,
+          3575,
+          282,
+          260,
+          1798,
+          30
+        ],
+        "max_new_tokens": 6,
+        "prompt_token_ids": [
+          504,
+          3575,
+          282,
+          4649,
+          314
+        ],
+        "request_id": "batch-0",
+        "state": "FINISHED"
+      },
+      {
+        "generated_text": " the city of Rome. It",
+        "generated_token_ids": [
+          260,
+          2240,
+          282,
+          7268,
+          30,
+          657
+        ],
+        "max_new_tokens": 6,
+        "prompt_token_ids": [
+          504,
+          3575,
+          282,
+          7158,
+          314
+        ],
+        "request_id": "batch-1",
+        "state": "FINISHED"
+      },
+      {
+        "generated_text": " Madrid. Madrid is",
+        "generated_token_ids": [
+          28030,
+          30,
+          28030,
+          314
+        ],
+        "max_new_tokens": 4,
+        "prompt_token_ids": [
+          504,
+          3575,
+          282,
+          7476,
+          314
+        ],
+        "request_id": "batch-2",
+        "state": "FINISHED"
+      }
+    ],
+    "step_trace": [
+      {
+        "decode_batch_size": null,
+        "decode_request_ids": [],
+        "prefill_request_ids": [
+          "batch-0",
+          "batch-1"
+        ],
+        "step": 1
+      },
+      {
+        "decode_batch_size": 2,
+        "decode_request_ids": [
+          "batch-0",
+          "batch-1"
+        ],
+        "prefill_request_ids": [],
+        "step": 2
+      },
+      {
+        "decode_batch_size": 2,
+        "decode_request_ids": [
+          "batch-0",
+          "batch-1"
+        ],
+        "prefill_request_ids": [
+          "batch-2"
+        ],
+        "step": 3
+      },
+      {
+        "decode_batch_size": 3,
+        "decode_request_ids": [
+          "batch-0",
+          "batch-1",
+          "batch-2"
+        ],
+        "prefill_request_ids": [],
+        "step": 4
+      },
+      {
+        "decode_batch_size": 3,
+        "decode_request_ids": [
+          "batch-0",
+          "batch-1",
+          "batch-2"
+        ],
+        "prefill_request_ids": [],
+        "step": 5
+      },
+      {
+        "decode_batch_size": 3,
+        "decode_request_ids": [
+          "batch-0",
+          "batch-1",
+          "batch-2"
+        ],
+        "prefill_request_ids": [],
+        "step": 6
+      }
+    ]
+  },
+  "decoding": "greedy",
+  "device": "cpu",
+  "dtype": "float32",
+  "individual": [
+    {
+      "active_caches_after_run": 0,
+      "decode_forwards": 5,
+      "generated_token_ids": [
+        260,
+        3575,
+        282,
+        260,
+        1798,
+        30
+      ],
+      "max_new_tokens": 6,
+      "prefill_forwards": 1,
+      "prompt": "The capital of France is",
+      "prompt_token_ids": [
+        504,
+        3575,
+        282,
+        4649,
+        314
+      ],
+      "state": "FINISHED"
+    },
+    {
+      "active_caches_after_run": 0,
+      "decode_forwards": 5,
+      "generated_token_ids": [
+        260,
+        2240,
+        282,
+        7268,
+        30,
+        657
+      ],
+      "max_new_tokens": 6,
+      "prefill_forwards": 1,
+      "prompt": "The capital of Italy is",
+      "prompt_token_ids": [
+        504,
+        3575,
+        282,
+        7158,
+        314
+      ],
+      "state": "FINISHED"
+    },
+    {
+      "active_caches_after_run": 0,
+      "decode_forwards": 3,
+      "generated_token_ids": [
+        28030,
+        30,
+        28030,
+        314
+      ],
+      "max_new_tokens": 4,
+      "prefill_forwards": 1,
+      "prompt": "The capital of Spain is",
+      "prompt_token_ids": [
+        504,
+        3575,
+        282,
+        7476,
+        314
+      ],
+      "state": "FINISHED"
+    }
+  ],
+  "join_after_steps": 2,
+  "join_max_new_tokens": 4,
+  "join_prompt": "The capital of Spain is",
+  "model_id": "HuggingFaceTB/SmolLM2-135M",
+  "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+  "start_max_new_tokens": [
+    6,
+    6
+  ],
+  "start_prompts": [
+    "The capital of France is",
+    "The capital of Italy is"
+  ]
+}
