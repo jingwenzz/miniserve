@@ -6,8 +6,9 @@ layers, 3 KV heads, head size 64, float32, eager attention,
 transformers 4.57.6). It started as a design plus a measured
 feasibility probe; both the equal length case and the padded
 different length case are now implemented as recorded below,
-and requests leave the batch dynamically when they finish or
-are cancelled. Prefill stays per request for now, as the plan
+requests leave the batch dynamically when they finish or are
+cancelled, and a new request can join a decode run that is
+already in progress. Prefill stays per request for now, as the plan
 allows: each request prefills on its own, and only decode
 forwards are batched.
 
@@ -245,6 +246,40 @@ finished, and both generated token sequences matched their
 individual runs. The active cache count after the run was 0 and
 both requests were released.
 
+## Implemented: joining mid decode
+
+A request that arrives while others are decoding joins without
+any layout change. Admission puts it in the waiting queue; at
+the next step boundary the scheduler selects it for prefill
+alongside that step's decode selection, the engine runs its
+prefill as its own forward (prefill and decode are separate
+forwards in the same step, never one fused mixed batch), and
+from the following step the request is one more row in the
+decode pack, with its own valid length, mask row, and logical
+positions. Nothing about the running rows changes: their caches
+are packed exactly as before, with the new row appended in
+decode list order. Scripted tests in
+`tests/test_batched_join.py` replay a fixed arrival after two
+steps, pin the per step prefill and decode id trace, check the
+joined cache length (prompt only, because its first token came
+from prefill and has not been fed back yet) and the split cache
+lengths after its first shared decode step, and compare all
+three token sequences against individual runs.
+
+Measured on the real model by
+`benchmarks/batched_join_generate.py`, saved in
+`benchmarks/batched_join_generate_output.json`: prompts "The
+capital of France is" and "The capital of Italy is" (5 tokens
+each, limit 6) started together, and "The capital of Spain is"
+(5 tokens, limit 4) was admitted after two steps. The run took
+6 engine steps with 3 prefill forwards and 5 decode forwards
+whose batch sizes were [2, 2, 3, 3, 3]: the third step prefilled
+the joined request while the original pair decoded, and from
+the fourth step all three decoded together. All three generated
+token sequences matched their individual runs token for token,
+the active cache count after the run was 0, and all three
+requests were released.
+
 ## Known costs and open items
 
 Pack and split copy every layer on every decode step, so the
@@ -254,4 +289,5 @@ named suspect to measure later, not a hidden one. Joining and
 leaving the batch need no layout change: a request joins by
 being included in the next pack with its own length, and leaves
 by being excluded after its split cache is released. Resource
-limits on the packed allocation are a separate later step.
+limits on the packed allocation are covered separately in
+`docs/resources.md`.
