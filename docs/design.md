@@ -618,3 +618,24 @@ cut order is fixed in advance: HTTP and extra charts are cut
 first, CLI and correctness checks are not. The cache structure
 recorded for the batching design is in `docs/generation.md`
 section 8.
+
+## 18. Resource limits checkpoint
+
+The scheduler now carries two resident resource limits next to
+the per step limits, with the full semantics in
+`docs/resources.md`:
+
+- A request reserves prompt plus full output limit from the
+  step it is prefilled until it reaches a terminal state. A
+  waiting request reserves nothing, because it holds no cache.
+- A reservation that exceeds the configured cache capacity on
+  its own is rejected at admission, like the context limit; a
+  reservation that only exceeds the currently free capacity
+  waits in the FIFO queue and starts when a finish or a
+  cancellation returns capacity. The reserved total is computed
+  from the running list, so the return cannot drift.
+- The per step token budget stays a logical work limit. It is
+  not a memory figure: the padded allocation of a batched step
+  follows the longest row, and pack and split temporaries are
+  not counted in any token number. No claim is made that token
+  counting alone can guarantee a run never runs out of memory.
