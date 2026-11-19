@@ -639,3 +639,85 @@ the per step limits, with the full semantics in
   follows the longest row, and pack and split temporaries are
   not counted in any token number. No claim is made that token
   counting alone can guarantee a run never runs out of memory.
+
+## 19. Fourth week checkpoint: batched runtime acceptance
+
+The batched runtime was re-verified end to end in one pass, on
+top of the per scenario records from the individual steps.
+`benchmarks/fourth_week_acceptance.py` runs six scenarios on
+the real locked model, compares every generated sequence token
+for token against individual single request runs with the same
+limits, and saves the full record, including one complete per
+step scheduling trace, in
+`benchmarks/fourth_week_acceptance_output.json`. The scripted
+counterpart suite is `tests/test_acceptance.py`, so the same
+six claims also run in the ordinary test command. Every check
+passed:
+
+| Scenario | Evidence from the saved record |
+| --- | --- |
+| Equal lengths (5 and 5, limit 4) | 4 steps, decode batch sizes [2, 2, 2], tokens matched |
+| Different lengths (7 and 2, limit 4) | 4 steps, decode batch sizes [2, 2, 2], tokens matched |
+| Exit (limits 2 and 5) | 5 steps, decode batch sizes [2, 1, 1, 1], survivor tokens matched |
+| Join (third request admitted after 2 steps) | 5 steps, decode batch sizes [2, 2, 3, 3], the step 3 trace shows the joined request prefilled while the original pair decoded, all three token sequences matched |
+| Cancel (running request cancelled after 2 steps) | Cancelled request frozen at its 2 produced tokens, survivor finished with its individual sequence, decode batch sizes [2, 1, 1, 1, 1] |
+| Failure (batched decode failure injected at the model boundary) | Both rows FAILED with the injected reason recorded, the exception propagated to the caller, both requests kept their 1 produced token |
+
+In every scenario the active cache count after the run was 0
+and every request was released. The acceptance conditions for
+this stage are therefore met on evidence, not on the earlier
+per scenario records alone: at least two requests share single
+decode forwards, a new request joins a run in progress, a
+request leaving early or cancelled does not disturb the
+survivors, and cleanup is complete on the finish, cancel, and
+failure paths alike. No throughput claim is made anywhere in
+this checkpoint: the machine is CPU only, the runs are small,
+and the numbers recorded are step and forward counts, which
+are scheduling facts, not performance results.
+
+Remaining risks, carried forward in priority order:
+
+| Risk | Why it matters | Standing response |
+| --- | --- | --- |
+| Pack and split copy every layer on every decode step | The copy cost grows with batch size and cached length and could erase the batching benefit, especially for a small model | Named suspect for the benchmark stage; measured before any performance wording is used |
+| Prefill is still one serial forward per request | A long prompt occupies its step and delays decode rows sharing that step | Accepted by the plan for this design; chunked prefill stays out of scope |
+| Reservations charge the full output limit | Requests that stop early waste resident capacity until they end | Accepted conservative bound, recorded in `docs/resources.md` |
+| Natural EOS still never observed on this base model | Real model EOS evidence rests on the shared custom EOS comparison and the scripted tests | Stated wherever EOS is claimed; not upgraded silently |
+| The layout is specific to this model family and cache type | Other architectures or cache implementations may not pack the same way | No portability claim; a second model would need its own layout check |
+| Failure injection covers batched decode, and prefill failure is covered by the single request cleanup suite | A failure mode outside those two paths is unproven | New executor paths must bring their own failure test, per the executor contract |
+
+Scope decision: the core runtime checkpoint passes, so the
+service work comes next as planned. If that work runs long,
+the cut order from the third week checkpoint still holds: the
+CLI and the verified runtime are the deliverable, and no
+unverified service behaviour is claimed in their place.
+
+## 20. Service boundary checkpoint
+
+The minimal service boundary is designed and frozen in
+`docs/service.md`; no server code exists yet, and none is
+claimed. The decisions that the implementation must not
+silently change:
+
+- One generation entry point (`POST /generate`), one streaming
+  variant with a fixed event vocabulary (`token`, then exactly
+  one terminal `finished` or `error`), one health check, and
+  one cancel command that mirrors the scheduler cancellation
+  contract, including its unknown id error.
+- The model is loaded once at startup from the locked
+  configuration. The API layer validates shape, assigns the
+  request id, and translates outcomes; admission, scheduling,
+  execution, and metrics stay in the runtime.
+- Error semantics are mapped to runtime sources, not invented
+  at the boundary: `invalid_request` from API validation,
+  `request_rejected` from admission refusal, `queue_full` from
+  the waiting queue bound, `generation_failed` from the
+  executor failure path, each in one shared error shape.
+- The contract is explicitly not OpenAI compatible, carries no
+  sampling controls, and states that cancellation takes effect
+  at a scheduling boundary.
+
+The staged implementation order (single engine owner, then
+streaming, then disconnect cancellation, then the queue bound,
+then an integration pass, then a freeze review) is recorded at
+the end of `docs/service.md`.

@@ -280,6 +280,19 @@ token sequences matched their individual runs token for token,
 the active cache count after the run was 0, and all three
 requests were released.
 
+## Acceptance record
+
+All of the implemented behaviours above were re-verified in
+one pass by `benchmarks/fourth_week_acceptance.py`, saved in
+`benchmarks/fourth_week_acceptance_output.json`: equal lengths,
+different lengths, exit, join, cancellation, and an injected
+batched decode failure, each compared token for token against
+individual runs, each ending with an active cache count of 0
+and every request released, and the join scenario saving its
+full per step trace. The scripted counterpart suite is
+`tests/test_acceptance.py`. The checkpoint summary and the
+remaining risk table are in `docs/design.md` section 19.
+
 ## Known costs and open items
 
 Pack and split copy every layer on every decode step, so the
