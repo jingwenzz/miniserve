@@ -1,0 +1,633 @@
+{
+  "all_checks_passed": true,
+  "decoding": "greedy",
+  "device": "cpu",
+  "dtype": "float32",
+  "model_id": "HuggingFaceTB/SmolLM2-135M",
+  "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+  "scenarios": {
+    "cancel": {
+      "active_caches_after_run": 0,
+      "checks": {
+        "active_caches_cleaned": true,
+        "cancelled_state": true,
+        "cancelled_tokens_frozen": true,
+        "every_request_released": true,
+        "survivor_finished": true,
+        "survivor_tokens_match_individual_run": true
+      },
+      "decode_batch_sizes": [
+        2,
+        1,
+        1,
+        1,
+        1
+      ],
+      "decode_forwards": 5,
+      "engine_steps": 6,
+      "prefill_forwards": 2,
+      "released_request_ids": [
+        "batch-0",
+        "batch-1"
+      ],
+      "requests": [
+        {
+          "failure_reason": null,
+          "generated_token_ids": [
+            260,
+            3575
+          ],
+          "max_new_tokens": 6,
+          "prompt_token_ids": [
+            504,
+            3575,
+            282,
+            4649,
+            314
+          ],
+          "request_id": "batch-0",
+          "state": "CANCELLED"
+        },
+        {
+          "failure_reason": null,
+          "generated_token_ids": [
+            260,
+            2240,
+            282,
+            7268,
+            30,
+            657
+          ],
+          "max_new_tokens": 6,
+          "prompt_token_ids": [
+            504,
+            3575,
+            282,
+            7158,
+            314
+          ],
+          "request_id": "batch-1",
+          "state": "FINISHED"
+        }
+      ],
+      "step_trace": [
+        {
+          "decode_batch_size": null,
+          "decode_request_ids": [],
+          "prefill_request_ids": [
+            "batch-0",
+            "batch-1"
+          ],
+          "step": 1
+        },
+        {
+          "decode_batch_size": 2,
+          "decode_request_ids": [
+            "batch-0",
+            "batch-1"
+          ],
+          "prefill_request_ids": [],
+          "step": 2
+        },
+        {
+          "decode_batch_size": 1,
+          "decode_request_ids": [
+            "batch-1"
+          ],
+          "prefill_request_ids": [],
+          "step": 3
+        },
+        {
+          "decode_batch_size": 1,
+          "decode_request_ids": [
+            "batch-1"
+          ],
+          "prefill_request_ids": [],
+          "step": 4
+        },
+        {
+          "decode_batch_size": 1,
+          "decode_request_ids": [
+            "batch-1"
+          ],
+          "prefill_request_ids": [],
+          "step": 5
+        },
+        {
+          "decode_batch_size": 1,
+          "decode_request_ids": [
+            "batch-1"
+          ],
+          "prefill_request_ids": [],
+          "step": 6
+        }
+      ]
+    },
+    "different_lengths": {
+      "active_caches_after_run": 0,
+      "checks": {
+        "active_caches_cleaned": true,
+        "every_request_released": true,
+        "prompt_lengths_differ": true,
+        "shared_decode_forward_ran": true,
+        "states_as_expected": true,
+        "tokens_match_individual_runs": true
+      },
+      "decode_batch_sizes": [
+        2,
+        2,
+        2
+      ],
+      "decode_forwards": 3,
+      "engine_steps": 4,
+      "prefill_forwards": 2,
+      "released_request_ids": [
+        "batch-0",
+        "batch-1"
+      ],
+      "requests": [
+        {
+          "failure_reason": null,
+          "generated_token_ids": [
+            30,
+            657,
+            314,
+            260
+          ],
+          "max_new_tokens": 4,
+          "prompt_token_ids": [
+            504,
+            3575,
+            282,
+            4649,
+            314,
+            281,
+            1910
+          ],
+          "request_id": "batch-0",
+          "state": "FINISHED"
+        },
+        {
+          "failure_reason": null,
+          "generated_token_ids": [
+            17,
+            198,
+            198,
+            57
+          ],
+          "max_new_tokens": 4,
+          "prompt_token_ids": [
+            19556,
+            905
+          ],
+          "request_id": "batch-1",
+          "state": "FINISHED"
+        }
+      ],
+      "step_trace": [
+        {
+          "decode_batch_size": null,
+          "decode_request_ids": [],
+          "prefill_request_ids": [
+            "batch-0",
+            "batch-1"
+          ],
+          "step": 1
+        },
+        {
+          "decode_batch_size": 2,
+          "decode_request_ids": [
+            "batch-0",
+            "batch-1"
+          ],
+          "prefill_request_ids": [],
+          "step": 2
+        },
+        {
+          "decode_batch_size": 2,
+          "decode_request_ids": [
+            "batch-0",
+            "batch-1"
+          ],
+          "prefill_request_ids": [],
+          "step": 3
+        },
+        {
+          "decode_batch_size": 2,
+          "decode_request_ids": [
+            "batch-0",
+            "batch-1"
+          ],
+          "prefill_request_ids": [],
+          "step": 4
+        }
+      ]
+    },
+    "equal_length": {
+      "active_caches_after_run": 0,
+      "checks": {
+        "active_caches_cleaned": true,
+        "every_request_released": true,
+        "shared_decode_forward_ran": true,
+        "states_as_expected": true,
+        "tokens_match_individual_runs": true
+      },
+      "decode_batch_sizes": [
+        2,
+        2,
+        2
+      ],
+      "decode_forwards": 3,
+      "engine_steps": 4,
+      "prefill_forwards": 2,
+      "released_request_ids": [
+        "batch-0",
+        "batch-1"
+      ],
+      "requests": [
+        {
+          "failure_reason": null,
+          "generated_token_ids": [
+            260,
+            3575,
+            282,
+            260
+          ],
+          "max_new_tokens": 4,
+          "prompt_token_ids": [
+            504,
+            3575,
+            282,
+            4649,
+            314
+          ],
+          "request_id": "batch-0",
+          "state": "FINISHED"
+        },
+        {
+          "failure_reason": null,
+          "generated_token_ids": [
+            260,
+            2240,
+            282,
+            7268
+          ],
+          "max_new_tokens": 4,
+          "prompt_token_ids": [
+            504,
+            3575,
+            282,
+            7158,
+            314
+          ],
+          "request_id": "batch-1",
+          "state": "FINISHED"
+        }
+      ],
+      "step_trace": [
+        {
+          "decode_batch_size": null,
+          "decode_request_ids": [],
+          "prefill_request_ids": [
+            "batch-0",
+            "batch-1"
+          ],
+          "step": 1
+        },
+        {
+          "decode_batch_size": 2,
+          "decode_request_ids": [
+            "batch-0",
+            "batch-1"
+          ],
+          "prefill_request_ids": [],
+          "step": 2
+        },
+        {
+          "decode_batch_size": 2,
+          "decode_request_ids": [
+            "batch-0",
+            "batch-1"
+          ],
+          "prefill_request_ids": [],
+          "step": 3
+        },
+        {
+          "decode_batch_size": 2,
+          "decode_request_ids": [
+            "batch-0",
+            "batch-1"
+          ],
+          "prefill_request_ids": [],
+          "step": 4
+        }
+      ]
+    },
+    "exit": {
+      "active_caches_after_run": 0,
+      "checks": {
+        "active_caches_cleaned": true,
+        "batch_shrank_after_exit": true,
+        "every_request_released": true,
+        "states_as_expected": true,
+        "tokens_match_individual_runs": true
+      },
+      "decode_batch_sizes": [
+        2,
+        1,
+        1,
+        1
+      ],
+      "decode_forwards": 4,
+      "engine_steps": 5,
+      "prefill_forwards": 2,
+      "released_request_ids": [
+        "batch-0",
+        "batch-1"
+      ],
+      "requests": [
+        {
+          "failure_reason": null,
+          "generated_token_ids": [
+            260,
+            3575
+          ],
+          "max_new_tokens": 2,
+          "prompt_token_ids": [
+            504,
+            3575,
+            282,
+            4649,
+            314
+          ],
+          "request_id": "batch-0",
+          "state": "FINISHED"
+        },
+        {
+          "failure_reason": null,
+          "generated_token_ids": [
+            260,
+            2240,
+            282,
+            7268,
+            30
+          ],
+          "max_new_tokens": 5,
+          "prompt_token_ids": [
+            504,
+            3575,
+            282,
+            7158,
+            314
+          ],
+          "request_id": "batch-1",
+          "state": "FINISHED"
+        }
+      ],
+      "step_trace": [
+        {
+          "decode_batch_size": null,
+          "decode_request_ids": [],
+          "prefill_request_ids": [
+            "batch-0",
+            "batch-1"
+          ],
+          "step": 1
+        },
+        {
+          "decode_batch_size": 2,
+          "decode_request_ids": [
+            "batch-0",
+            "batch-1"
+          ],
+          "prefill_request_ids": [],
+          "step": 2
+        },
+        {
+          "decode_batch_size": 1,
+          "decode_request_ids": [
+            "batch-1"
+          ],
+          "prefill_request_ids": [],
+          "step": 3
+        },
+        {
+          "decode_batch_size": 1,
+          "decode_request_ids": [
+            "batch-1"
+          ],
+          "prefill_request_ids": [],
+          "step": 4
+        },
+        {
+          "decode_batch_size": 1,
+          "decode_request_ids": [
+            "batch-1"
+          ],
+          "prefill_request_ids": [],
+          "step": 5
+        }
+      ]
+    },
+    "failure": {
+      "active_caches_after_run": 0,
+      "checks": {
+        "active_caches_cleaned": true,
+        "both_requests_failed": true,
+        "every_request_released": true,
+        "exception_propagated_to_caller": true,
+        "failure_reason_recorded": true,
+        "produced_tokens_kept": true
+      },
+      "decode_batch_sizes": [],
+      "decode_forwards": 0,
+      "engine_steps": 1,
+      "prefill_forwards": 2,
+      "released_request_ids": [
+        "batch-0",
+        "batch-1"
+      ],
+      "requests": [
+        {
+          "failure_reason": "batched decode forward failed: RuntimeError: injected batched decode failure",
+          "generated_token_ids": [
+            260
+          ],
+          "max_new_tokens": 4,
+          "prompt_token_ids": [
+            504,
+            3575,
+            282,
+            4649,
+            314
+          ],
+          "request_id": "batch-0",
+          "state": "FAILED"
+        },
+        {
+          "failure_reason": "batched decode forward failed: RuntimeError: injected batched decode failure",
+          "generated_token_ids": [
+            260
+          ],
+          "max_new_tokens": 4,
+          "prompt_token_ids": [
+            504,
+            3575,
+            282,
+            7158,
+            314
+          ],
+          "request_id": "batch-1",
+          "state": "FAILED"
+        }
+      ],
+      "step_trace": [
+        {
+          "decode_batch_size": null,
+          "decode_request_ids": [],
+          "prefill_request_ids": [
+            "batch-0",
+            "batch-1"
+          ],
+          "step": 1
+        }
+      ]
+    },
+    "join": {
+      "active_caches_after_run": 0,
+      "checks": {
+        "active_caches_cleaned": true,
+        "batch_grew_at_join": true,
+        "every_request_released": true,
+        "joined_request_finished": true,
+        "states_as_expected": true,
+        "tokens_match_individual_runs": true
+      },
+      "decode_batch_sizes": [
+        2,
+        2,
+        3,
+        3
+      ],
+      "decode_forwards": 4,
+      "engine_steps": 5,
+      "prefill_forwards": 3,
+      "released_request_ids": [
+        "batch-0",
+        "batch-1",
+        "batch-2"
+      ],
+      "requests": [
+        {
+          "failure_reason": null,
+          "generated_token_ids": [
+            260,
+            3575,
+            282,
+            260,
+            1798
+          ],
+          "max_new_tokens": 5,
+          "prompt_token_ids": [
+            504,
+            3575,
+            282,
+            4649,
+            314
+          ],
+          "request_id": "batch-0",
+          "state": "FINISHED"
+        },
+        {
+          "failure_reason": null,
+          "generated_token_ids": [
+            260,
+            2240,
+            282,
+            7268,
+            30
+          ],
+          "max_new_tokens": 5,
+          "prompt_token_ids": [
+            504,
+            3575,
+            282,
+            7158,
+            314
+          ],
+          "request_id": "batch-1",
+          "state": "FINISHED"
+        },
+        {
+          "failure_reason": null,
+          "generated_token_ids": [
+            28030,
+            30,
+            28030
+          ],
+          "max_new_tokens": 3,
+          "prompt_token_ids": [
+            504,
+            3575,
+            282,
+            7476,
+            314
+          ],
+          "request_id": "batch-2",
+          "state": "FINISHED"
+        }
+      ],
+      "step_trace": [
+        {
+          "decode_batch_size": null,
+          "decode_request_ids": [],
+          "prefill_request_ids": [
+            "batch-0",
+            "batch-1"
+          ],
+          "step": 1
+        },
+        {
+          "decode_batch_size": 2,
+          "decode_request_ids": [
+            "batch-0",
+            "batch-1"
+          ],
+          "prefill_request_ids": [],
+          "step": 2
+        },
+        {
+          "decode_batch_size": 2,
+          "decode_request_ids": [
+            "batch-0",
+            "batch-1"
+          ],
+          "prefill_request_ids": [
+            "batch-2"
+          ],
+          "step": 3
+        },
+        {
+          "decode_batch_size": 3,
+          "decode_request_ids": [
+            "batch-0",
+            "batch-1",
+            "batch-2"
+          ],
+          "prefill_request_ids": [],
+          "step": 4
+        },
+        {
+          "decode_batch_size": 3,
+          "decode_request_ids": [
+            "batch-0",
+            "batch-1",
+            "batch-2"
+          ],
+          "prefill_request_ids": [],
+          "step": 5
+        }
+      ]
+    }
+  }
+}
