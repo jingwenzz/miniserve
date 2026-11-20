@@ -1,0 +1,180 @@
+{
+  "active_caches_after_run": 0,
+  "all_checks_passed": true,
+  "decode_batch_sizes": [
+    1,
+    2,
+    2,
+    2,
+    2,
+    1
+  ],
+  "decoding": "greedy",
+  "device": "cpu",
+  "dtype": "float32",
+  "engine_steps": 7,
+  "max_new_tokens": 6,
+  "model_id": "HuggingFaceTB/SmolLM2-135M",
+  "prompts": [
+    "The capital of France is",
+    "The capital of Italy is"
+  ],
+  "released_request_ids": [
+    "stream-0",
+    "stream-1"
+  ],
+  "requests": [
+    {
+      "events": [
+        {
+          "arrived_at_seconds": 0.6047,
+          "index": 0,
+          "request_id": "stream-0",
+          "text": " the",
+          "token_id": 260,
+          "type": "token"
+        },
+        {
+          "arrived_at_seconds": 0.8298,
+          "index": 1,
+          "request_id": "stream-0",
+          "text": " capital",
+          "token_id": 3575,
+          "type": "token"
+        },
+        {
+          "arrived_at_seconds": 0.9204,
+          "index": 2,
+          "request_id": "stream-0",
+          "text": " of",
+          "token_id": 282,
+          "type": "token"
+        },
+        {
+          "arrived_at_seconds": 0.9715,
+          "index": 3,
+          "request_id": "stream-0",
+          "text": " the",
+          "token_id": 260,
+          "type": "token"
+        },
+        {
+          "arrived_at_seconds": 1.0614,
+          "index": 4,
+          "request_id": "stream-0",
+          "text": " country",
+          "token_id": 1798,
+          "type": "token"
+        },
+        {
+          "arrived_at_seconds": 1.1476,
+          "index": 5,
+          "request_id": "stream-0",
+          "text": ".",
+          "token_id": 30,
+          "type": "token"
+        },
+        {
+          "arrived_at_seconds": 1.1477,
+          "finish_reason": "finished",
+          "generated_tokens": 6,
+          "request_id": "stream-0",
+          "type": "finished"
+        }
+      ],
+      "first_token_event_before_terminal": true,
+      "full_decoded_text": " the capital of the country.",
+      "generated_token_ids": [
+        260,
+        3575,
+        282,
+        260,
+        1798,
+        30
+      ],
+      "request_id": "stream-0",
+      "state": "FINISHED",
+      "streamed_text": " the capital of the country.",
+      "streamed_text_matches_full_decoding": true,
+      "terminal_event_count": 1,
+      "token_event_count": 6
+    },
+    {
+      "events": [
+        {
+          "arrived_at_seconds": 0.8299,
+          "index": 0,
+          "request_id": "stream-1",
+          "text": " the",
+          "token_id": 260,
+          "type": "token"
+        },
+        {
+          "arrived_at_seconds": 0.9205,
+          "index": 1,
+          "request_id": "stream-1",
+          "text": " city",
+          "token_id": 2240,
+          "type": "token"
+        },
+        {
+          "arrived_at_seconds": 0.9715,
+          "index": 2,
+          "request_id": "stream-1",
+          "text": " of",
+          "token_id": 282,
+          "type": "token"
+        },
+        {
+          "arrived_at_seconds": 1.0615,
+          "index": 3,
+          "request_id": "stream-1",
+          "text": " Rome",
+          "token_id": 7268,
+          "type": "token"
+        },
+        {
+          "arrived_at_seconds": 1.1481,
+          "index": 4,
+          "request_id": "stream-1",
+          "text": ".",
+          "token_id": 30,
+          "type": "token"
+        },
+        {
+          "arrived_at_seconds": 1.2258,
+          "index": 5,
+          "request_id": "stream-1",
+          "text": " It",
+          "token_id": 657,
+          "type": "token"
+        },
+        {
+          "arrived_at_seconds": 1.2258,
+          "finish_reason": "finished",
+          "generated_tokens": 6,
+          "request_id": "stream-1",
+          "type": "finished"
+        }
+      ],
+      "first_token_event_before_terminal": true,
+      "full_decoded_text": " the city of Rome. It",
+      "generated_token_ids": [
+        260,
+        2240,
+        282,
+        7268,
+        30,
+        657
+      ],
+      "request_id": "stream-1",
+      "state": "FINISHED",
+      "streamed_text": " the city of Rome. It",
+      "streamed_text_matches_full_decoding": true,
+      "terminal_event_count": 1,
+      "token_event_count": 6
+    }
+  ],
+  "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+  "timing_kind": "wall clock observations on a shared CPU, not a performance result"
+}
