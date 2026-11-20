@@ -213,3 +213,33 @@ no forward and reserves no capacity.
 6. A freeze review that lists what the service does not
    support, starting with: no authentication, no sampling
    controls, no multi model serving, no OpenAI compatibility.
+
+## Implementation status
+
+Staged steps 1 and 2 are implemented, in `src/miniserve/service.py`
+and `src/miniserve/streaming.py`, and checked in
+`docs/design.md` sections 21 and 22:
+
+1. Done: background execution with a single engine owner and a
+   thread safe command queue. A second request is received and
+   admitted while a first one is generating, the scheduler is
+   only ever touched by the worker thread, and an idle owner
+   blocks on its queue instead of busy waiting. Shutdown
+   finishes pending requests, then refuses new ones.
+2. Done at the transport independent layer: token events are
+   produced after every engine step with incremental decoding,
+   each stream ends with exactly one terminal event, and
+   `StreamEvent.format_sse` renders the server sent events
+   frame defined above. No HTTP server exists yet, so no
+   endpoint is claimed to answer yet; a front end must go
+   through the owner and may not touch the runtime directly.
+3. Not yet: client disconnect mapped to the cancel command.
+   The cancel command itself works through the owner and
+   mirrors the scheduler contract, including the unknown id
+   error.
+4. Not yet: the waiting queue bound and the slow consumer
+   policy behind the `queue_full` response. Until that step
+   lands, a submitted request is never answered with
+   `queue_full`, and a slow stream reader only backs up its
+   own handle's unbounded event queue.
+5. Not yet: the integration pass and the freeze review.

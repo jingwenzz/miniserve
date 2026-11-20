@@ -721,3 +721,92 @@ The staged implementation order (single engine owner, then
 streaming, then disconnect cancellation, then the queue bound,
 then an integration pass, then a freeze review) is recorded at
 the end of `docs/service.md`.
+
+## 21. Background execution checkpoint
+
+The first staged step of `docs/service.md` is implemented in
+`src/miniserve/service.py`. `EngineOwner` runs one engine on
+one worker thread. That thread is the only one that calls
+scheduler or engine methods, so scheduler state has a single
+owner and the executor only ever runs on that thread. Callers
+on other threads hand the worker commands (submit, cancel,
+shutdown) through one thread safe queue and are answered on a
+per command reply queue. Submission returns as soon as
+admission is decided, not when generation finishes.
+
+Semantics worth keeping:
+
+- When nothing is pending the worker blocks on the command
+  queue; it does not poll or spin. While requests are pending
+  it drains queued commands between steps, then runs one step,
+  so a command waits at most for the step already in progress,
+  which is the scheduling boundary the cancellation contract
+  already stated.
+- A step that raises does not kill the worker. The engine has
+  already cleaned up the failed step; the worker finalises the
+  requests that reached a terminal state and keeps serving the
+  rest, so a waiting request behind a failing one still runs.
+  A FAILED request's handle raises `GenerationFailedError`
+  from `result`, carrying the recorded failure reason.
+- Shutdown is a command. Once queued, new submissions are
+  refused, requests already pending are finished, and then
+  the worker exits. Submitting after shutdown raises
+  `RuntimeError` instead of queueing work nobody will run.
+- Health reports liveness and the active count only; it runs
+  no forward and reserves no capacity, as the contract says.
+
+Evidence: `tests/test_service.py` (9 tests, fake executor, a
+step gated executor makes the concurrency deterministic), and
+`benchmarks/service_demo.py` with its saved record
+`benchmarks/service_demo_output.json`, where the second
+request was submitted at 0.101 seconds while the first was
+still generating (it finished at 0.302), every executor call
+ran on the single worker thread, and both requests were
+released. The demo's decode delay is artificial and its times
+are labelled simulation, not a performance result. No HTTP
+layer exists yet; the owner is the boundary a later front end
+must use, and the queue bound behind `queue_full` is still
+the later overload step, not part of this checkpoint.
+
+## 22. Streaming events checkpoint
+
+The second staged step is implemented in the same owner plus
+`src/miniserve/streaming.py`. After every engine step the
+worker diffs each active request's generated token list
+against what it already emitted and queues one `token` event
+per new token on that request's handle, before the next step
+runs. A reader therefore receives the first token event while
+generation is still in progress. Each handle then receives
+exactly one terminal event, `finished` (including a
+`cancelled` finish reason) or `error` for a FAILED request,
+and nothing after it. `StreamEvent.format_sse` renders the
+server sent events frame of the frozen contract; no HTTP
+transport is claimed yet.
+
+Incremental text comes from `IncrementalDecoder`, which
+re-decodes the whole token sequence produced so far and emits
+only the new suffix. Decoding each token in isolation and
+concatenating would be wrong whenever a piece's text depends
+on its neighbours or a token carries only part of a multi
+byte character; a trailing replacement character is held back
+as unstable until a later token completes it or the request
+ends. With no tokenizer, token events carry ids and empty
+text, and no text is invented.
+
+Evidence: `tests/test_streaming.py` (9 tests, scripted
+executors and sequence dependent tokenizers, including the
+split character case and a first token event observed while
+the worker was gated inside the following decode), and
+`benchmarks/service_streaming_demo.py` with its saved record
+`benchmarks/service_streaming_output.json` on the real locked
+model: two prompts streamed concurrently, token events for
+the two requests interleaved in arrival time, each stream
+ended by exactly one `finished` event, each streamed text
+equal to the decoding of its full token sequence, decode
+batch sizes [1, 2, 2, 2, 2, 1], active caches back to zero,
+and both requests released. Its times are wall clock
+observations on a shared CPU, not a performance result.
+Client disconnect cancellation and the slow consumer policy
+remain later staged steps; a slow reader currently only
+backs up its own handle's unbounded event queue, which the
+overload step must bound.
