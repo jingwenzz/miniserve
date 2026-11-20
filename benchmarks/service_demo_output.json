@@ -1,0 +1,54 @@
+{
+  "all_checks_passed": true,
+  "backend": "fake executor with an artificial decode delay",
+  "engine_steps": 8,
+  "executor_thread_ids": [
+    130863261529792
+  ],
+  "first": {
+    "generated_tokens": 6,
+    "request_id": "demo-a",
+    "state": "FINISHED"
+  },
+  "health_while_running": {
+    "accepting_requests": true,
+    "active_requests": 0,
+    "status": "ok",
+    "worker_alive": true
+  },
+  "order": [
+    {
+      "at_seconds": 0.0006,
+      "event": "first_submitted"
+    },
+    {
+      "at_seconds": 0.0523,
+      "event": "first_token_observed"
+    },
+    {
+      "at_seconds": 0.101,
+      "event": "second_submitted"
+    },
+    {
+      "at_seconds": 0.302,
+      "event": "first_finished"
+    },
+    {
+      "at_seconds": 0.3523,
+      "event": "second_finished"
+    }
+  ],
+  "released_request_ids": [
+    "demo-a",
+    "demo-b"
+  ],
+  "second": {
+    "generated_tokens": 4,
+    "request_id": "demo-b",
+    "state": "FINISHED"
+  },
+  "second_submitted_before_first_finished": true,
+  "single_worker_thread": true,
+  "timing_kind": "simulation of the service flow, not a performance result",
+  "worker_thread_id": 130863261529792
+}
