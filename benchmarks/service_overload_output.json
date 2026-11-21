@@ -1,0 +1,71 @@
+{
+  "all_checks_passed": true,
+  "backend": "fake executors, one with an artificial decode delay",
+  "overload": {
+    "accepted_states": [
+      "FINISHED",
+      "FINISHED",
+      "FINISHED"
+    ],
+    "passed": true,
+    "refused": [
+      {
+        "error_code": "queue_full",
+        "request_id": "ov-overflow-1",
+        "waiting_count": 2,
+        "waiting_limit": 2
+      },
+      {
+        "error_code": "queue_full",
+        "request_id": "ov-overflow-2",
+        "waiting_count": 2,
+        "waiting_limit": 2
+      }
+    ],
+    "retry_after_drain": {
+      "generated_tokens": 1,
+      "request_id": "ov-overflow-1",
+      "state": "FINISHED"
+    },
+    "stats_at_refusal": {
+      "accepted": 3,
+      "disconnect_cancellations": 0,
+      "offered": 5,
+      "queue_full_rejection_rate": 0.4,
+      "rejected_admission": 0,
+      "rejected_queue_full": 2,
+      "slow_consumer_cancellations": 0
+    }
+  },
+  "slow_consumer": {
+    "good": {
+      "dropped_events": 0,
+      "events": [
+        "token",
+        "finished"
+      ],
+      "generated_tokens": 1,
+      "request_id": "ov-good",
+      "state": "FINISHED"
+    },
+    "passed": true,
+    "slow": {
+      "buffer_limit": 2,
+      "dropped_events": 2,
+      "events_read_afterwards": [
+        "token",
+        "finished"
+      ],
+      "generated_tokens": 3,
+      "released": true,
+      "request_id": "ov-slow",
+      "slow_consumer": true,
+      "state": "CANCELLED",
+      "terminal_finish_reason": "cancelled",
+      "terminal_generated_tokens": 3
+    },
+    "slow_consumer_cancellations": 1,
+    "worker_alive_after": true
+  },
+  "timing_kind": "simulation of the service flow, not a performance result"
+}
