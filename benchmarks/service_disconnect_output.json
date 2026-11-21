@@ -1,0 +1,32 @@
+{
+  "all_checks_passed": true,
+  "backend": "fake executor with an artificial decode delay",
+  "disconnect_cancellations": 2,
+  "no_pending_requests_after_disconnects": true,
+  "released_request_ids": [
+    "disc-running",
+    "disc-survivor"
+  ],
+  "running": {
+    "first_event_type": "token",
+    "generated_tokens": 3,
+    "output_limit": 20,
+    "released": true,
+    "request_id": "disc-running",
+    "state": "CANCELLED",
+    "still_frozen_after_0.3s": true
+  },
+  "survivor": {
+    "generated_tokens": 3,
+    "request_id": "disc-survivor",
+    "state": "FINISHED"
+  },
+  "timing_kind": "simulation of the service flow, not a performance result",
+  "waiting": {
+    "disconnect_returned": true,
+    "generated_tokens": 0,
+    "released": false,
+    "request_id": "disc-waiting",
+    "state": "CANCELLED"
+  }
+}
