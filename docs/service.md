@@ -48,8 +48,8 @@ contract; nothing in this document claims a running server yet.
 The streaming transport is implemented in its own step; the
 event vocabulary below is fixed now so that step cannot invent
 a second outcome language. Cancellation propagation from a
-disconnected client is likewise a later step; the command and
-its responses are fixed here.
+disconnected client is likewise implemented in its own step,
+against the command and responses fixed here.
 
 ## Generation request
 
@@ -188,6 +188,68 @@ finishes, or after a shutdown begins, it answers 503 with
 false. Health reports the service, not a generation: it runs
 no forward and reserves no capacity.
 
+## Client disconnect
+
+A client disconnect is a cancellation with a recorded
+reason, implemented at the owner layer so any transport can
+use it:
+
+- A transport that detects its client went away calls the
+  owner's disconnect command; a stream consumer at this
+  layer signals the same thing by closing the request's
+  event stream early, and the handle's own `disconnect`
+  method forwards to the same command. All three reach the
+  worker as one command kind and share the cancellation
+  outcome contract above: `true` for an active request,
+  `false` for an ended one, the `unknown_request` error for
+  an id never admitted.
+- Waiting and running requests are both covered. A waiting
+  request leaves the queue without ever being prefilled, so
+  it holds no cache and needs no release. A running request
+  stops at the next scheduling boundary: a forward already
+  in flight is not interrupted, and the tokens it produced
+  stay produced and counted. The engine then releases the
+  request's backend resources on the ordinary cancelled
+  path, its stream ends with the single terminal event
+  (`finished` with reason `cancelled`), and no other request
+  is affected.
+- Disconnect cancellations are counted separately from
+  explicit cancels in the owner's statistics, so a report
+  can tell a client that left apart from a client that
+  asked.
+
+## Overload and slow consumers
+
+Two bounds, both service configuration on the engine owner,
+with defaults that are on (32 waiting requests, 128 buffered
+events per request):
+
+- The waiting queue bound counts only requests sitting in
+  the scheduler's waiting queue, never running ones. The
+  check runs on the worker thread at admission time, where
+  the count is exact. A submission that finds the queue full
+  is refused at once with the `queue_full` error above: it
+  is not queued, nothing is silently dropped, and its id is
+  not consumed, so the same id may be retried once the queue
+  drains. The owner counts offered, accepted, queue full
+  refusals, and scheduler admission refusals, and reports
+  the queue full rejection rate next to them; a latency
+  report that omits the refused requests is not an honest
+  overload report.
+- The per request event buffer bound exists so one slow
+  reader can never stall the engine: the worker enqueues
+  events without ever blocking. When a token event does not
+  fit, the event is dropped and counted on the handle, the
+  handle is marked as a slow consumer, and the worker
+  cancels that request at the same scheduling boundary,
+  because a client that is not reading will not read the
+  rest either. The terminal event is always delivered: if
+  the buffer is full when it is due, the oldest buffered
+  token events are dropped (and counted) to make room, so a
+  reader that resumes learns how the request ended. Slow
+  consumer cancellations are counted in the same statistics
+  as the admission outcomes.
+
 ## What the API layer must never do
 
 - Run a model forward, pack a cache, or pick a schedule. If a
@@ -216,9 +278,9 @@ no forward and reserves no capacity.
 
 ## Implementation status
 
-Staged steps 1 and 2 are implemented, in `src/miniserve/service.py`
+Staged steps 1 to 4 are implemented, in `src/miniserve/service.py`
 and `src/miniserve/streaming.py`, and checked in
-`docs/design.md` sections 21 and 22:
+`docs/design.md` sections 21 to 24:
 
 1. Done: background execution with a single engine owner and a
    thread safe command queue. A second request is received and
@@ -233,13 +295,13 @@ and `src/miniserve/streaming.py`, and checked in
    frame defined above. No HTTP server exists yet, so no
    endpoint is claimed to answer yet; a front end must go
    through the owner and may not touch the runtime directly.
-3. Not yet: client disconnect mapped to the cancel command.
-   The cancel command itself works through the owner and
-   mirrors the scheduler contract, including the unknown id
-   error.
-4. Not yet: the waiting queue bound and the slow consumer
-   policy behind the `queue_full` response. Until that step
-   lands, a submitted request is never answered with
-   `queue_full`, and a slow stream reader only backs up its
-   own handle's unbounded event queue.
+3. Done: client disconnect mapped to the cancel command, as
+   described in the client disconnect section above. Waiting
+   and running disconnects are both covered by tests and by
+   `benchmarks/service_disconnect_demo.py`.
+4. Done: the waiting queue bound and the slow consumer
+   policy behind the `queue_full` response, as described in
+   the overload section above, with admission statistics
+   that count refusals next to acceptances. Checked by tests
+   and by `benchmarks/service_overload_demo.py`.
 5. Not yet: the integration pass and the freeze review.

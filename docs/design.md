@@ -810,3 +810,106 @@ Client disconnect cancellation and the slow consumer policy
 remain later staged steps; a slow reader currently only
 backs up its own handle's unbounded event queue, which the
 overload step must bound.
+
+## 23. Client disconnect checkpoint
+
+The third staged step of `docs/service.md` is implemented in
+`src/miniserve/service.py`. A disconnect reaches the worker
+as its own command kind and is then indistinguishable from
+an explicit cancel: the worker calls the scheduler's single
+cancellation entry point, the engine releases a tracked
+request that reached a terminal state, and the handle is
+finalised with the single terminal event. Three caller side
+signals forward to that command: the owner's `disconnect`
+method, the handle's `disconnect` method, and closing a
+handle's event stream early, which the events iterator
+treats as the client going away. The handle records that it
+was disconnected and why, and the owner counts disconnect
+cancellations separately from explicit cancels.
+
+Semantics worth keeping:
+
+- Waiting and running requests take the same path and end
+  in different resource states, both correct: a waiting
+  request was never prefilled, is never tracked by the
+  engine, and needs no release; a running request is
+  released exactly once on the ordinary cancelled path.
+- Cancellation still takes effect only at a scheduling
+  boundary. A disconnect that arrives while a step is in
+  flight waits for that step; the step's token stays
+  produced and counted, and no token is produced after the
+  boundary. A forward already running on a real backend is
+  not preempted, which the contract already stated.
+- After the disconnect the request is gone from both
+  queues, so nothing keeps generating in the background,
+  and the worker keeps serving every other request.
+
+Evidence: `tests/test_disconnect.py` (3 tests: a waiting
+disconnect through the handle with a step gated executor,
+asserting zero tokens and no release; a running disconnect
+through the owner, frozen at exactly one token with its
+release recorded and the service still usable afterwards,
+including the repeated disconnect and unknown id cases; and
+a stream close disconnect against a slow fake executor,
+frozen well below its limit), and
+`benchmarks/service_disconnect_demo.py` with its saved
+record `benchmarks/service_disconnect_output.json`, where a
+waiting request disconnected with zero tokens and no
+release, a running request froze at 3 of 20 tokens and was
+still frozen 0.3 seconds later, and a survivor submitted
+afterwards finished normally. The demo's decode delay is
+artificial and its record is labelled simulation, not a
+performance result.
+
+## 24. Overload and slow consumer checkpoint
+
+The fourth staged step is implemented in the same owner.
+Admission now runs an overload check on the worker thread
+before scheduler admission: if the scheduler's waiting
+queue is already at the configured bound (default 32
+waiting requests; running requests never count), the
+submission is refused with `QueueFullError`, the
+`queue_full` error of the contract. The refusal reaches no
+scheduler state: nothing is queued and the request id is
+not consumed, so the same id succeeds once the queue
+drains. The owner counts every decision it makes (offered,
+accepted, refused for a full queue, refused by scheduler
+admission) and reports the queue full rejection rate from
+those counts, because an overload report that only covers
+accepted requests hides exactly the requests that mattered.
+
+Each handle's event queue is now bounded (default 128
+events) and the worker enqueues without ever blocking, so
+a slow reader cannot stall the engine for other clients.
+The slow consumer rule is cancellation, not silent loss: a
+token event that does not fit is dropped and counted on
+the handle, the handle is marked as a slow consumer, and
+the worker cancels the request at that same boundary
+through the scheduler, with the ordinary release and
+terminal event. The terminal event itself is guaranteed:
+if the buffer is full when it is due, the oldest buffered
+token events are dropped and counted to make room, so a
+reader that resumes always learns the outcome and the true
+generated token count instead of waiting on a stream that
+never ends. Disconnect and slow consumer cancellations are
+counted in the same admission statistics.
+
+Evidence: `tests/test_overload.py` (4 tests: the waiting
+bound under a step gated executor, asserting the error's
+code, limit, and observed count, the statistics and
+rejection rate, and the refused id being accepted on retry;
+a slow consumer with a two event buffer cancelled at
+exactly three produced tokens with dropped events counted,
+its release recorded, and its terminal event delivered on
+a late read; a well behaved request served normally after
+a slow consumer; and invalid bound configuration rejected),
+and `benchmarks/service_overload_demo.py` with its saved
+record `benchmarks/service_overload_output.json`: five
+offered, three accepted, two refused with `queue_full`, a
+rejection rate of 0.4, the refused id accepted after the
+queue drained, and the slow consumer cancelled at three
+tokens with two dropped events and its terminal event
+intact. Both scenarios use fake executors and are labelled
+simulation. What remains for the service week is the
+integration pass over mixed clients and the freeze review;
+no HTTP transport exists yet, and none is claimed.
