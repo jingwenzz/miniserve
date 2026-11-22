@@ -51,6 +51,28 @@ python -m pytest -q
 
 Verified on 2026-11-09: Python 3.12.3, pytest 9.2.0, 90 passed, demo completed 3 requests in 5 steps. See `docs/devlog.md` for the full record.
 
+## Running the HTTP service
+
+The runtime also serves over HTTP through a single engine owner (see `docs/service.md` for the contract and the frozen list of what is and is not supported). Start it from the repository root:
+
+```bash
+python benchmarks/run_server.py --port 8000          # fake backend, no model download
+python benchmarks/run_server.py --port 8000 --real   # locked real model, needs the model extra
+```
+
+The fake backend tokenizes by word count and returns empty generated text, because it has no tokenizer; it exists so the service shape can be tried in seconds. The `--real` mode loads the locked model once and returns real text.
+
+From another terminal:
+
+```bash
+curl http://127.0.0.1:8000/health
+curl -X POST http://127.0.0.1:8000/generate -H 'Content-Type: application/json' -d '{"prompt": "The capital of France is", "max_new_tokens": 8}'
+curl -N -X POST http://127.0.0.1:8000/generate/stream -H 'Content-Type: application/json' -d '{"prompt": "The capital of France is", "max_new_tokens": 8}'
+curl -X POST http://127.0.0.1:8000/requests/<request_id>/cancel
+```
+
+Stop the server with Ctrl+C: pending requests finish, then the worker exits and no thread is left behind. The integration pass over two normal clients, a cancellation, an invalid request, an overload refusal, a failure, and a real model smoke test is `python benchmarks/service_integration.py`, with its record in `benchmarks/service_integration_output.json`.
+
 ## Scope and design choices
 
 - **Simulator, not a server.** There is deliberately no real model, tokenizer, or HTTP API. The executor is a timing model, which makes scheduling behavior deterministic and easy to test.
