@@ -6,11 +6,10 @@ behind one engine owner, the streaming event transport,
 client disconnect mapped to cancellation, and the overload
 policy (a bounded waiting queue and a bounded per request
 event buffer with a slow consumer rule). The HTTP layer
-itself is not part of this module; whatever front end is
-added later talks to the owner exactly the way the tests and
-demos here do, by submitting requests and reading handles,
-and it never touches the scheduler, the engine, or an
-executor directly.
+lives in ``miniserve.server`` and talks to the owner exactly
+the way the tests and demos here do, by submitting requests
+and reading handles; it never touches the scheduler, the
+engine, or an executor directly.
 
 Ownership rules:
 
