@@ -304,4 +304,73 @@ and `src/miniserve/streaming.py`, and checked in
    the overload section above, with admission statistics
    that count refusals next to acceptances. Checked by tests
    and by `benchmarks/service_overload_demo.py`.
-5. Not yet: the integration pass and the freeze review.
+5. Done: the integration pass over HTTP, in
+   `src/miniserve/server.py`, `tests/test_http_integration.py`,
+   and `benchmarks/service_integration.py` with its saved
+   record `benchmarks/service_integration_output.json`: two
+   normal clients at once, one streaming client cancelled mid
+   generation, one invalid request and one admission
+   rejection, one overload refusal, one executor failure
+   reported as a visible error while the worker survives, and
+   one small real model smoke test through the same HTTP
+   layer. Shutdown leaves no worker thread behind.
+6. Done: the freeze review below.
+
+## Freeze review: what the service does and does not support
+
+Frozen at the fifth week review. From here on, only changes
+that affect correctness or the experiment stage are in scope;
+no new product features are added to the service.
+
+Supported, each with the evidence named in `docs/design.md`
+sections 21 to 25:
+
+- One model loaded once per process, greedy decoding, one
+  engine owner thread that alone touches the scheduler, the
+  engine, and the executor.
+- `GET /health`, `POST /generate`, `POST /generate/stream`
+  with the frozen event vocabulary (token events, then
+  exactly one terminal `finished` or `error`), and
+  `POST /requests/{request_id}/cancel` mirroring the
+  scheduler cancellation contract, including the
+  `unknown_request` error.
+- The five contract errors with their HTTP statuses:
+  `invalid_request` 400, `request_rejected` 400,
+  `queue_full` 429, `generation_failed` 500,
+  `unknown_request` 404. No failure path leaves a client
+  waiting forever.
+- Client disconnect mapped to cancellation (explicit
+  disconnect, closing the event stream, or a broken streaming
+  socket), effective at the next scheduling boundary.
+- A bounded waiting queue with admission statistics that
+  count refusals next to acceptances, and a bounded per
+  request event buffer whose slow consumer rule cancels the
+  request instead of stalling the worker, with the terminal
+  event always delivered.
+
+Not supported, and not claimed anywhere:
+
+- No authentication, no per client quotas or billing, no
+  multi tenant isolation.
+- No sampling controls: decoding is greedy, and sampling
+  fields in a request body are ignored, as the contract
+  states.
+- No multi model serving, no model reload or swap at
+  runtime, no multi process or multi device execution.
+- No OpenAI compatibility: paths, field names, and the event
+  vocabulary are this project's own.
+- No persistence: request handles and metrics live in
+  memory for the life of the process, and a restart forgets
+  every request id, so a cancel after a restart is an
+  `unknown_request`.
+- No transport encryption or hardening: the server is the
+  standard library HTTP server bound to localhost by
+  default, intended for local demonstration and testing,
+  not for exposure to an untrusted network.
+- No guarantee that a token count prevents out of memory:
+  the resource limits are the conservative logical bounds
+  recorded in `docs/resources.md`.
+- The fake backend mode of `benchmarks/run_server.py`
+  produces token ids with no tokenizer behind them, so its
+  generated text is empty by design; only the `--real` mode
+  returns model text.

@@ -913,3 +913,81 @@ intact. Both scenarios use fake executors and are labelled
 simulation. What remains for the service week is the
 integration pass over mixed clients and the freeze review;
 no HTTP transport exists yet, and none is claimed.
+
+## 25. HTTP integration checkpoint
+
+The fifth staged step is implemented in
+`src/miniserve/server.py`, using only the standard library
+HTTP server, so the project gains no runtime dependency. A
+thin front end object holds the owner, the tokenize
+function, and the model identity; the handler threads only
+parse bodies, call the front end, and write responses or
+stream frames. Every generation still goes through the
+engine owner, so model execution stays on the single worker
+thread and the HTTP layer never touches the scheduler, the
+engine, or an executor.
+
+The four contract endpoints answer as specified: health
+reports the owner status plus the loaded model id and
+revision (200 while accepting, 503 once unavailable); the
+non streaming generate path validates the body, assigns the
+request id, waits on the handle, and returns the result
+object with the runtime finish reason and token counts; the
+streaming path writes the frozen server sent events frames
+as they arrive and maps a broken socket to the owner's
+disconnect command; cancel mirrors the scheduler contract,
+including `unknown_request` as a 404. The contract error
+table is implemented one to one: `invalid_request` 400 for
+malformed JSON and shape failures, `request_rejected` 400
+for admission refusals, `queue_full` 429, and
+`generation_failed` 500 carrying the recorded failure
+reason, so a worker failure is a visible response, never a
+hanging connection.
+
+Evidence: `tests/test_http_integration.py` (6 tests over
+real HTTP on ephemeral ports: two concurrent clients, a
+streaming client cancelled through the cancel endpoint with
+exactly one terminal event and a working follow up request,
+invalid and rejected bodies, an overload refusal with its
+admission statistics, an injected executor failure answered
+500 while health stays ok and the next request succeeds, and
+a shutdown check that no worker thread survives), and
+`benchmarks/service_integration.py` with its saved record
+`benchmarks/service_integration_output.json`, which reruns
+the same five flow scenarios plus a real model smoke test
+through HTTP (the locked model answered one generate call
+with 5 prompt tokens, 4 generated tokens, and real text, and
+its active cache count returned to zero). The flow scenarios
+use fake executors and are labelled simulation; the smoke
+timing is a wall clock observation on a shared CPU. The
+startup command and curl examples are in the README and in
+`benchmarks/run_server.py`, which serves a fake backend by
+default and the locked model with `--real`.
+
+## 26. Fifth week checkpoint and feature freeze
+
+Checked at the fifth week review by rerunning the full
+suite (169 passed), the HTTP integration script (all
+scenarios passed, including the real model smoke test), the
+scheduler demo, the type check, and a manual curl pass
+against `benchmarks/run_server.py` (health, one generate
+call, and one streamed generate call, all answering as the
+contract specifies).
+
+The service is frozen here. The supported and unsupported
+lists are recorded at the end of `docs/service.md` and are
+the claims ceiling from now on: single owner execution,
+streaming with the frozen vocabulary, disconnect and
+explicit cancellation, the bounded waiting queue and event
+buffer, and the five contract errors are supported and
+evidenced; authentication, sampling, multi model serving,
+OpenAI compatibility, persistence, and exposure beyond
+localhost are not supported and are not claimed. The CLI
+core and the verified runtime underneath are unchanged by
+the freeze.
+
+What remains is the experiment stage: a fixed protocol, a
+pilot, the main serial against continuous comparison, and
+the write up. From here on only correctness fixes and
+experiment work are in scope; a service change that is not
+needed for correctness does not land, however small.
