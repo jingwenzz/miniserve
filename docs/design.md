@@ -991,3 +991,80 @@ pilot, the main serial against continuous comparison, and
 the write up. From here on only correctness fixes and
 experiment work are in scope; a service change that is not
 needed for correctness does not land, however small.
+
+## 27. Benchmark protocol checkpoint
+
+The real model experiment protocol is frozen in
+`docs/benchmark_protocol.md`, with its machine readable copy in
+`configs/benchmark.json`, before any real comparison was run.
+The decisions the experiment stage must not silently change:
+
+- The comparison is serial (SerialScheduler plus the single
+  request executor) against continuous (the default scheduler
+  plus the batched executor), sharing the loaded model, the
+  tokenizer, the prompt token ids, the output limit, and the
+  scheduler limits. A result is a strategy result, never a pure
+  scheduler result, because the executors differ by design.
+- Model loading and per strategy warmup (2 requests, discarded)
+  are excluded from every timed window. The core runtime window
+  is the wall clock around `run_until_complete` with all
+  requests already admitted (an all at once closed batch); the
+  HTTP benchmark is separate and client timed, and simulation
+  numbers never enter a real table.
+- Fixed length runs and natural EOS runs are separate modes.
+  Fixed length mode sets the executor EOS id to the sentinel
+  -1, stated openly in the protocol, so every request generates
+  exactly its limit and the workload is identical by
+  construction. Natural EOS mode uses the model EOS id 0 and
+  must record actual output lengths.
+- Timing on this CPU only machine is wall clock over
+  synchronous execution: no CUDA events exist to use, and no
+  per token synchronisation is inserted. A GPU repeat would
+  require rewriting that section first.
+- A run may be quoted only after its workload check passes:
+  equal finished counts, prompt tokens, and output tokens, and
+  token for token identical sequences per request id in fixed
+  length mode. Each run writes a fresh run directory and
+  refuses to overwrite an existing one.
+
+## 28. Pilot checkpoint
+
+The pilot defined in the protocol ran as run id
+`real-pilot-seed1234` (`benchmarks/pilot_benchmark.py`): 20
+requests per strategy, the 10 protocol prompts cycled twice
+(prompt lengths 5, 5, 6, 6, 9, 8, 5, 8, 9, 6, totalling 134
+prompt tokens per strategy), output limit 8, fixed length mode,
+continuous batch size 4, serial first. Model load took 5.3644
+seconds and warmup took 3.0889 (serial) and 0.9924 (continuous)
+seconds; all three figures are excluded observations.
+
+Results, all wall clock on the shared CPU and exploratory at
+this single repeat scale: both strategies finished 20 of 20
+with 0 failed, 0 cancelled, and 160 output tokens, and the
+generated sequences matched token for token per request id, so
+the workload check passed. Serial took 160 steps (20 prefill
+and 140 decode forwards) and 27.4936 seconds, with mean TTFT
+13.0717, mean latency 14.2577, and mean TPOT 0.1694.
+Continuous took 40 steps (20 prefill and 35 decode forwards,
+every decode batch size 4) and 13.9019 seconds, with mean TTFT
+6.1622, mean latency 8.2292, and mean TPOT 0.2953. Active
+caches returned to zero and all 20 requests were released
+under both strategies. The manual timing check recomputed the
+first serial request's queue time, TTFT, latency, and TPOT
+from its raw timestamps and matched the stored values exactly.
+
+Problems found by the pilot: none in timing, EOS, queue, or
+configuration behaviour. No request stopped early (every output
+length is exactly 8 and no generated token is the natural EOS
+id 0), no queue or admission error occurred, and the two
+strategies used the same backend model and output lengths, so
+nothing had to be fixed before the main experiment. Two
+observations are recorded instead of hidden: continuous TPOT
+is higher even though its TTFT and latency are lower, because
+a batched decode step costs more wall time per step while the
+wait before the first token shrinks; and with batch size 4 the
+continuous run is five sequential groups of four, not one
+batch of twenty, which is exactly the concurrency variable the
+main experiment varies next. These pilot numbers are a
+measurement path check, not a headline comparison: one repeat,
+a shared CPU, and no rotation of strategy order.
