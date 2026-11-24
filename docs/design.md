@@ -1068,3 +1068,105 @@ batch of twenty, which is exactly the concurrency variable the
 main experiment varies next. These pilot numbers are a
 measurement path check, not a headline comparison: one repeat,
 a shared CPU, and no rotation of strategy order.
+
+## 29. Main experiment checkpoint
+
+The main experiment ran as run id `real-main-seed1234`
+(`benchmarks/main_benchmark.py`) under the frozen protocol:
+closed batches of 20 requests, fixed length mode, output limit
+8, three repeats per configuration, strategy order rotated
+between repeats, and the continuous concurrency (its scheduler
+max batch size) varied over 1, 2, 4, and 8 on two workloads.
+Serial has no concurrency variable, so it ran once per workload
+and repeat and is paired with each continuous concurrency of
+the same repeat. The short workload cycles the 10 protocol
+prompts (lengths 5 to 9); the mixed workload alternates those
+short prompts with long prompts of 20 to 24 tokens built by
+appending fixed suffix texts, so prefill costs differ by about
+a factor of three inside one batch. The sample is 60 finished
+requests per continuous point, below the plan target of about
+100, so every figure is exploratory and ranges across repeats
+are reported next to means. Every run finished all 20 requests
+with 0 failed and 0 cancelled, and every token comparison
+against the paired serial run matched, so the workload check
+passed for all 30 runs.
+
+Short workload, means across the three repeats with the wall
+range in brackets: serial took 27.39 seconds [25.83, 28.40] at
+5.85 output tokens per second, mean TTFT 13.2452, mean latency
+14.3988, mean TPOT 0.1648. Continuous at concurrency 1 was
+statistically indistinguishable from serial (25.70 seconds,
+6.23 tokens per second), which is the expected fairness
+sanity check because a batch size of 1 reduces it to one
+request per step. At concurrency 2, 4, and 8 the wall time
+fell to 15.69, 10.56, and 9.30 seconds and output throughput
+rose to 10.21, 15.19, and 17.48 tokens per second, about three
+times the serial figure at concurrency 8. Mean TTFT fell from
+13.2452 (serial) to 3.5028 and mean latency from 14.3988 to
+5.8303 at concurrency 8, while mean TPOT rose from 0.1648 to
+0.3325: sharing steps cuts the wait before the first token,
+but each batched step is more expensive, so the gap between
+two tokens of one request grows. The gain from 4 to 8 is much
+smaller than from 1 to 2 or 2 to 4 on every metric.
+
+Mixed workload: serial took 27.46 seconds [26.80, 27.88] at
+5.83 tokens per second. Continuous rose from 5.67 tokens per
+second at concurrency 1 to 8.78, 13.95, and 15.56 at 2, 4, and
+8, with wall times 28.24, 18.23, 11.49, and 10.30 seconds.
+Mean latency fell from 14.5063 (serial) to 6.7148 at
+concurrency 4 and then stayed at 6.7141 at concurrency 8,
+while mean TPOT kept rising to 0.3753: on this workload the
+latency benefit of wider batches saturates at 4, and going to
+8 buys throughput only, paid for with slower per token
+progress for each individual request. These are shared CPU
+wall clock observations for this model and workload only; no
+slower run was hidden and no GPU conclusion is drawn.
+
+## 30. Token budget mechanism checkpoint
+
+The mechanism experiment ran as run id `real-budget-seed1234`
+(`benchmarks/budget_benchmark.py`): the mixed workload,
+continuous strategy, concurrency 4, 20 requests, fixed length
+mode, three repeats, tier order rotated, with the per step
+token budget set to 32, 64, and the protocol default 8192.
+The smallest budget still admits the longest prompt (24
+tokens) on its own, and admission was verified identical
+across tiers, so the accepted request set is the same at
+every budget and differences are budget effects. Every run
+finished 20 of 20 and all generated sequences matched the
+reference run token for token.
+
+Results, means across repeats: budget 32 took 42.0 engine
+steps and 13.02 wall seconds [11.90, 14.70], with mean TTFT
+6.1510, mean latency 8.1303, and mean TPOT 0.2828. Budget 64
+took 40.0 steps and 11.44 seconds [10.81, 12.49], mean TTFT
+5.2530, mean latency 6.9560, mean TPOT 0.2433. Budget 8192
+took 40.0 steps and 12.50 seconds [11.82, 13.47], mean TTFT
+5.4543, mean latency 7.3240, mean TPOT 0.2671. The wall ranges
+of the three tiers overlap, so no tier is claimed faster
+overall on this machine.
+
+What the mechanism actually shows is narrower and more
+useful. The budget binds only when the work a step wants to
+pick exceeds it: with concurrency 4 the batch size cap leaves
+at most 4 slots, decode costs 1 token each, and only a long
+prefill of 20 to 24 tokens can push a step over a budget of
+32, which is why budget 32 costs exactly 2 extra steps (one
+long prefill deferred in each of two places) and why budgets
+64 and 8192 produce identical step counts of 40: above the
+largest step the scheduler would ever pick, a bigger budget
+changes nothing. The single request timeline makes the same
+point per request: the first long request (main-mixed-01,
+prompt 20 tokens) waited 1.4155 seconds in the queue in one
+budget 32 repeat, against 0.12 to 0.19 seconds in the other
+eight runs, because its prefill did not fit the step in which
+it first became eligible and it waited for a later step under
+FIFO order; in the other budget 32 repeats its prefill
+happened to fit and its timeline is unremarkable. So the
+budget is a real scheduling lever, but at this scale it is
+the second constraint to bind, after batch size, and its
+effect appears as occasional deferred prefills and higher
+TTFT for the deferred requests rather than as a uniform
+slowdown. A workload with longer prompts or a larger batch
+size would make the budget bind far more often; that is a
+prediction from the step accounting, not a measured result.
