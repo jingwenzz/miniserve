@@ -1,0 +1,689 @@
+{
+  "aggregated": {
+    "mixed|continuous|1": {
+      "cancelled_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "engine_steps": {
+        "max": 160.0,
+        "mean": 160.0,
+        "min": 160.0
+      },
+      "failed_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "finished_per_repeat": [
+        20,
+        20,
+        20
+      ],
+      "mean_latency": {
+        "max": 15.121292966149985,
+        "mean": 14.612056941066626,
+        "min": 13.98509065455005
+      },
+      "mean_tpot": {
+        "max": 0.16882323846426905,
+        "mean": 0.1649586434452214,
+        "min": 0.1598420627928395
+      },
+      "mean_ttft": {
+        "max": 13.939523332700082,
+        "mean": 13.457339506966719,
+        "min": 12.866188385650139
+      },
+      "output_tokens_per_repeat": [
+        160,
+        160,
+        160
+      ],
+      "output_tokens_per_second": {
+        "max": 5.902742176492491,
+        "mean": 5.671082009469615,
+        "min": 5.499381418115408
+      },
+      "repeats": 3,
+      "requests_per_second": {
+        "max": 0.7378427720615613,
+        "mean": 0.7088852511837018,
+        "min": 0.687422677264426
+      },
+      "wall_duration_seconds": {
+        "max": 29.094181296999523,
+        "mean": 28.238340359666534,
+        "min": 27.106045837000238
+      }
+    },
+    "mixed|continuous|2": {
+      "cancelled_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "engine_steps": {
+        "max": 80.0,
+        "mean": 80.0,
+        "min": 80.0
+      },
+      "failed_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "finished_per_repeat": [
+        20,
+        20,
+        20
+      ],
+      "mean_latency": {
+        "max": 10.322388945600006,
+        "mean": 10.172568425566684,
+        "min": 10.0563672537
+      },
+      "mean_tpot": {
+        "max": 0.2160874068142935,
+        "mean": 0.20469863585238576,
+        "min": 0.19316767489285666
+      },
+      "mean_ttft": {
+        "max": 8.809772778399974,
+        "mean": 8.739673713433332,
+        "min": 8.62247729859996
+      },
+      "output_tokens_per_repeat": [
+        160,
+        160,
+        160
+      ],
+      "output_tokens_per_second": {
+        "max": 9.035197697929028,
+        "mean": 8.782011562973082,
+        "min": 8.466928433768416
+      },
+      "repeats": 3,
+      "requests_per_second": {
+        "max": 1.1293997122411286,
+        "mean": 1.0977514453716353,
+        "min": 1.058366054221052
+      },
+      "wall_duration_seconds": {
+        "max": 18.89705354799935,
+        "mean": 18.232374763333002,
+        "min": 17.708522308999818
+      }
+    },
+    "mixed|continuous|4": {
+      "cancelled_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "engine_steps": {
+        "max": 40.0,
+        "mean": 40.0,
+        "min": 40.0
+      },
+      "failed_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "finished_per_repeat": [
+        20,
+        20,
+        20
+      ],
+      "mean_latency": {
+        "max": 7.1964156303999065,
+        "mean": 6.71476473025006,
+        "min": 6.4109401555001115
+      },
+      "mean_tpot": {
+        "max": 0.2533684621071318,
+        "mean": 0.23752839199761575,
+        "min": 0.22912342480716302
+      },
+      "mean_ttft": {
+        "max": 5.422831899499897,
+        "mean": 5.052062609266705,
+        "min": 4.800284321750132
+      },
+      "output_tokens_per_repeat": [
+        160,
+        160,
+        160
+      ],
+      "output_tokens_per_second": {
+        "max": 14.28581641909769,
+        "mean": 13.945095126624187,
+        "min": 13.300830006374037
+      },
+      "repeats": 3,
+      "requests_per_second": {
+        "max": 1.7857270523872113,
+        "mean": 1.7431368908280234,
+        "min": 1.6626037507967546
+      },
+      "wall_duration_seconds": {
+        "max": 12.029324480000469,
+        "mean": 11.486129033666657,
+        "min": 11.199919927999872
+      }
+    },
+    "mixed|continuous|8": {
+      "cancelled_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "engine_steps": {
+        "max": 24.0,
+        "mean": 24.0,
+        "min": 24.0
+      },
+      "failed_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "finished_per_repeat": [
+        20,
+        20,
+        20
+      ],
+      "mean_latency": {
+        "max": 6.923680995049881,
+        "mean": 6.714117785483313,
+        "min": 6.3912786827499986
+      },
+      "mean_tpot": {
+        "max": 0.38813831621428757,
+        "mean": 0.37530127189286194,
+        "min": 0.3561193214428645
+      },
+      "mean_ttft": {
+        "max": 4.25215485259987,
+        "mean": 4.08700607821664,
+        "min": 3.8984405843500554
+      },
+      "output_tokens_per_repeat": [
+        160,
+        160,
+        160
+      ],
+      "output_tokens_per_second": {
+        "max": 16.501502199504575,
+        "mean": 15.55778519773589,
+        "min": 14.960666682606194
+      },
+      "repeats": 3,
+      "requests_per_second": {
+        "max": 2.062687774938072,
+        "mean": 1.9447231497169863,
+        "min": 1.8700833353257742
+      },
+      "wall_duration_seconds": {
+        "max": 10.694710563000626,
+        "mean": 10.303123987333493,
+        "min": 9.696086941999965
+      }
+    },
+    "mixed|serial|1": {
+      "cancelled_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "engine_steps": {
+        "max": 160.0,
+        "mean": 160.0,
+        "min": 160.0
+      },
+      "failed_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "finished_per_repeat": [
+        20,
+        20,
+        20
+      ],
+      "mean_latency": {
+        "max": 15.038909675499918,
+        "mean": 14.506283562049992,
+        "min": 13.853009036750109
+      },
+      "mean_tpot": {
+        "max": 0.16418302073573482,
+        "mean": 0.16172023694286855,
+        "min": 0.15756761858571866
+      },
+      "mean_ttft": {
+        "max": 13.889620054649821,
+        "mean": 13.374234732249944,
+        "min": 12.750029241000084
+      },
+      "output_tokens_per_repeat": [
+        160,
+        160,
+        160
+      ],
+      "output_tokens_per_second": {
+        "max": 5.970781004469038,
+        "mean": 5.828132962588274,
+        "min": 5.738086616994894
+      },
+      "repeats": 3,
+      "requests_per_second": {
+        "max": 0.7463476255586298,
+        "mean": 0.7285166203235343,
+        "min": 0.7172608271243618
+      },
+      "wall_duration_seconds": {
+        "max": 27.883859321000273,
+        "mean": 27.46136762533327,
+        "min": 26.79716437099978
+      }
+    },
+    "short|continuous|1": {
+      "cancelled_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "engine_steps": {
+        "max": 160.0,
+        "mean": 160.0,
+        "min": 160.0
+      },
+      "failed_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "finished_per_repeat": [
+        20,
+        20,
+        20
+      ],
+      "mean_latency": {
+        "max": 14.014978109149979,
+        "mean": 13.53865317431658,
+        "min": 13.137627849799902
+      },
+      "mean_tpot": {
+        "max": 0.15998941610000655,
+        "mean": 0.1565661229666689,
+        "min": 0.15229691234998688
+      },
+      "mean_ttft": {
+        "max": 12.895046327149975,
+        "mean": 12.442684240949923,
+        "min": 12.071542587549903
+      },
+      "output_tokens_per_repeat": [
+        160,
+        160,
+        160
+      ],
+      "output_tokens_per_second": {
+        "max": 6.397817494348329,
+        "mean": 6.228443220501187,
+        "min": 6.057938773569637
+      },
+      "repeats": 3,
+      "requests_per_second": {
+        "max": 0.7997271867935412,
+        "mean": 0.7785554025626483,
+        "min": 0.7572423466962046
+      },
+      "wall_duration_seconds": {
+        "max": 26.411623818000407,
+        "mean": 25.701364620666634,
+        "min": 25.008528321000085
+      }
+    },
+    "short|continuous|2": {
+      "cancelled_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "engine_steps": {
+        "max": 80.0,
+        "mean": 80.0,
+        "min": 80.0
+      },
+      "failed_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "finished_per_repeat": [
+        20,
+        20,
+        20
+      ],
+      "mean_latency": {
+        "max": 8.74429171450006,
+        "mean": 8.515226787750073,
+        "min": 8.136062303200152
+      },
+      "mean_tpot": {
+        "max": 0.18890916011430686,
+        "mean": 0.18049780890715042,
+        "min": 0.1688675894499998
+      },
+      "mean_ttft": {
+        "max": 7.458271023950101,
+        "mean": 7.251737938449999,
+        "min": 6.953985312299937
+      },
+      "output_tokens_per_repeat": [
+        160,
+        160,
+        160
+      ],
+      "output_tokens_per_second": {
+        "max": 10.672096885692191,
+        "mean": 10.206952918085276,
+        "min": 9.873714726435779
+      },
+      "repeats": 3,
+      "requests_per_second": {
+        "max": 1.334012110711524,
+        "mean": 1.2758691147606596,
+        "min": 1.2342143408044723
+      },
+      "wall_duration_seconds": {
+        "max": 16.204640748999736,
+        "mean": 15.692609127000045,
+        "min": 14.992367640000339
+      }
+    },
+    "short|continuous|4": {
+      "cancelled_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "engine_steps": {
+        "max": 40.0,
+        "mean": 40.0,
+        "min": 40.0
+      },
+      "failed_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "finished_per_repeat": [
+        20,
+        20,
+        20
+      ],
+      "mean_latency": {
+        "max": 6.913836935649897,
+        "mean": 6.349148929716603,
+        "min": 5.9219920969498165
+      },
+      "mean_tpot": {
+        "max": 0.24309699885002373,
+        "mean": 0.2305736250571456,
+        "min": 0.21384909987856582
+      },
+      "mean_ttft": {
+        "max": 5.212155243649795,
+        "mean": 4.735130319233304,
+        "min": 4.425045406299932
+      },
+      "output_tokens_per_repeat": [
+        160,
+        160,
+        160
+      ],
+      "output_tokens_per_second": {
+        "max": 16.331798110422127,
+        "mean": 15.190787873430962,
+        "min": 14.54759722269748
+      },
+      "repeats": 3,
+      "requests_per_second": {
+        "max": 2.041474763802766,
+        "mean": 1.8988484841788702,
+        "min": 1.818449652837185
+      },
+      "wall_duration_seconds": {
+        "max": 10.998379838999426,
+        "mean": 10.56159392766646,
+        "min": 9.796839204000207
+      }
+    },
+    "short|continuous|8": {
+      "cancelled_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "engine_steps": {
+        "max": 24.0,
+        "mean": 24.0,
+        "min": 24.0
+      },
+      "failed_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "finished_per_repeat": [
+        20,
+        20,
+        20
+      ],
+      "mean_latency": {
+        "max": 6.529950692149896,
+        "mean": 5.830281900883301,
+        "min": 5.062179774050037
+      },
+      "mean_tpot": {
+        "max": 0.3816219500785727,
+        "mean": 0.33249049416429316,
+        "min": 0.2735078950500078
+      },
+      "mean_ttft": {
+        "max": 3.858594587999869,
+        "mean": 3.502845929299898,
+        "min": 3.1476222638499167
+      },
+      "output_tokens_per_repeat": [
+        160,
+        160,
+        160
+      ],
+      "output_tokens_per_second": {
+        "max": 20.575217389251335,
+        "mean": 17.4848133308103,
+        "min": 15.245540439876056
+      },
+      "repeats": 3,
+      "requests_per_second": {
+        "max": 2.571902173656417,
+        "mean": 2.1856016663512876,
+        "min": 1.905692554984507
+      },
+      "wall_duration_seconds": {
+        "max": 10.494872295999812,
+        "mean": 9.296751528666391,
+        "min": 7.7763455409995
+      }
+    },
+    "short|serial|1": {
+      "cancelled_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "engine_steps": {
+        "max": 160.0,
+        "mean": 160.0,
+        "min": 160.0
+      },
+      "failed_per_repeat": [
+        0,
+        0,
+        0
+      ],
+      "finished_per_repeat": [
+        20,
+        20,
+        20
+      ],
+      "mean_latency": {
+        "max": 15.665452373000017,
+        "mean": 14.398775016350038,
+        "min": 13.548436223200042
+      },
+      "mean_tpot": {
+        "max": 0.1697380026142777,
+        "mean": 0.16479988468809315,
+        "min": 0.15664099848570784
+      },
+      "mean_ttft": {
+        "max": 14.477279758250097,
+        "mean": 13.245168864116705,
+        "min": 12.451941583350026
+      },
+      "output_tokens_per_repeat": [
+        160,
+        160,
+        160
+      ],
+      "output_tokens_per_second": {
+        "max": 6.195353845827869,
+        "mean": 5.8522460618346415,
+        "min": 5.633497525967208
+      },
+      "repeats": 3,
+      "requests_per_second": {
+        "max": 0.7744192307284836,
+        "mean": 0.7315307577293302,
+        "min": 0.704187190745901
+      },
+      "wall_duration_seconds": {
+        "max": 28.401539054999375,
+        "mean": 27.386952288999964,
+        "min": 25.825804947000506
+      }
+    }
+  },
+  "all_checks_passed": true,
+  "concurrencies": [
+    1,
+    2,
+    4,
+    8
+  ],
+  "cuda_available": false,
+  "device": "cpu",
+  "eos_mode": "fixed_length",
+  "execution_order": [
+    "short_serial_r0",
+    "short_continuous_c1_r0",
+    "short_continuous_c2_r0",
+    "short_continuous_c4_r0",
+    "short_continuous_c8_r0",
+    "short_continuous_c2_r1",
+    "short_continuous_c4_r1",
+    "short_continuous_c8_r1",
+    "short_continuous_c1_r1",
+    "short_serial_r1",
+    "short_serial_r2",
+    "short_continuous_c4_r2",
+    "short_continuous_c8_r2",
+    "short_continuous_c1_r2",
+    "short_continuous_c2_r2",
+    "mixed_serial_r0",
+    "mixed_continuous_c1_r0",
+    "mixed_continuous_c2_r0",
+    "mixed_continuous_c4_r0",
+    "mixed_continuous_c8_r0",
+    "mixed_continuous_c2_r1",
+    "mixed_continuous_c4_r1",
+    "mixed_continuous_c8_r1",
+    "mixed_continuous_c1_r1",
+    "mixed_serial_r1",
+    "mixed_serial_r2",
+    "mixed_continuous_c4_r2",
+    "mixed_continuous_c8_r2",
+    "mixed_continuous_c1_r2",
+    "mixed_continuous_c2_r2"
+  ],
+  "kind": "real_model_main_experiment",
+  "max_new_tokens": 8,
+  "model_id": "HuggingFaceTB/SmolLM2-135M",
+  "model_load_seconds_excluded": 3.3842690929996024,
+  "num_requests_per_run": 20,
+  "repeats": 3,
+  "revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+  "run_id": "real-main-seed1234",
+  "sample_note": "20 requests per run and 3 repeats give 60 finished requests per continuous point, below the plan target of about 100 per point; results are exploratory at this sample size.",
+  "simulation": false,
+  "token_comparisons_all_match": true,
+  "workloads": {
+    "mixed": {
+      "prompt_lengths": [
+        5,
+        20,
+        6,
+        20,
+        9,
+        20,
+        5,
+        21,
+        9,
+        24,
+        5,
+        22,
+        6,
+        20,
+        9,
+        23,
+        5,
+        23,
+        9,
+        21
+      ],
+      "total_prompt_tokens": 282
+    },
+    "short": {
+      "prompt_lengths": [
+        5,
+        5,
+        6,
+        6,
+        9,
+        8,
+        5,
+        8,
+        9,
+        6,
+        5,
+        5,
+        6,
+        6,
+        9,
+        8,
+        5,
+        8,
+        9,
+        6
+      ],
+      "total_prompt_tokens": 134
+    }
+  }
+}
