@@ -1,0 +1,107 @@
+{
+  "change": "Replace per row zero padding plus two stage concatenation in BatchedRealExecutor._pack_caches with one zero filled allocation per layer and one copy per row into its trailing slice. Packed values verified identical by tests/test_bottleneck_analysis.py.",
+  "kind": "pack_optimization_attempt",
+  "measurement": "benchmarks/bottleneck_analysis.py segmented medians, 7 trials per configuration, run back to back on the same shared CPU only machine before and after the change.",
+  "segments": [
+    {
+      "batch_size": 1,
+      "forward_seconds_median_after": 0.17927279900050053,
+      "forward_seconds_median_before": 0.11990298900036578,
+      "lengths": [
+        5
+      ],
+      "pack_seconds_median_after_single_allocation": 0.0012906600004498614,
+      "pack_seconds_median_before": 0.0007315999991988065,
+      "workload_kind": "short"
+    },
+    {
+      "batch_size": 2,
+      "forward_seconds_median_after": 0.1151741799994852,
+      "forward_seconds_median_before": 0.18081394599994383,
+      "lengths": [
+        5,
+        5
+      ],
+      "pack_seconds_median_after_single_allocation": 0.0014413069993679528,
+      "pack_seconds_median_before": 0.0008138130006045685,
+      "workload_kind": "short"
+    },
+    {
+      "batch_size": 4,
+      "forward_seconds_median_after": 0.19262264799999684,
+      "forward_seconds_median_before": 0.18168170999979338,
+      "lengths": [
+        5,
+        5,
+        6,
+        6
+      ],
+      "pack_seconds_median_after_single_allocation": 0.003297126000688877,
+      "pack_seconds_median_before": 0.001757892999194155,
+      "workload_kind": "short"
+    },
+    {
+      "batch_size": 8,
+      "forward_seconds_median_after": 0.1925785919993359,
+      "forward_seconds_median_before": 0.18475059299998975,
+      "lengths": [
+        5,
+        5,
+        6,
+        6,
+        9,
+        8,
+        5,
+        8
+      ],
+      "pack_seconds_median_after_single_allocation": 0.007350890999987314,
+      "pack_seconds_median_before": 0.005627980000099342,
+      "workload_kind": "short"
+    },
+    {
+      "batch_size": 2,
+      "forward_seconds_median_after": 0.18152600600024016,
+      "forward_seconds_median_before": 0.11289312099961535,
+      "lengths": [
+        5,
+        20
+      ],
+      "pack_seconds_median_after_single_allocation": 0.0019239719995312043,
+      "pack_seconds_median_before": 0.0013496090004991856,
+      "workload_kind": "mixed"
+    },
+    {
+      "batch_size": 4,
+      "forward_seconds_median_after": 0.1797173680006381,
+      "forward_seconds_median_before": 0.18120058699969377,
+      "lengths": [
+        5,
+        20,
+        6,
+        21
+      ],
+      "pack_seconds_median_after_single_allocation": 0.0028599699999176664,
+      "pack_seconds_median_before": 0.0034652799995456007,
+      "workload_kind": "mixed"
+    },
+    {
+      "batch_size": 8,
+      "forward_seconds_median_after": 0.1961080769997352,
+      "forward_seconds_median_before": 0.20319186699998681,
+      "lengths": [
+        5,
+        20,
+        6,
+        21,
+        9,
+        23,
+        5,
+        23
+      ],
+      "pack_seconds_median_after_single_allocation": 0.009917318000589148,
+      "pack_seconds_median_before": 0.009693522999441484,
+      "workload_kind": "mixed"
+    }
+  ],
+  "verdict": "No improvement was measured: pack medians after the change are within run to run noise of the before medians and slightly higher in most configurations, while forward medians for identical configurations swing by tens of milliseconds between the two runs. The change was reverted; the shipped pack code is the code that produced the recorded main experiment. Pack remains a minor share of the decode step at these cache lengths, so this is recorded as a tried and rejected micro optimization, not as a speedup."
+}
