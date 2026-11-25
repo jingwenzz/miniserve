@@ -1,0 +1,389 @@
+{
+  "budget_steps_by_budget": {
+    "32": 42.0,
+    "64": 40.0,
+    "8192": 40.0
+  },
+  "derived_ratios": {
+    "mixed": {
+      "by_concurrency": {
+        "1": {
+          "engine_steps_mean": 160.0,
+          "mean_latency": 14.612056941066626,
+          "mean_tpot": 0.1649586434452214,
+          "mean_ttft": 13.457339506966719,
+          "output_tokens_per_second": 5.671082009469615,
+          "throughput_ratio_vs_serial": 0.9730529563881273,
+          "tpot_ratio_vs_serial": 1.0200247449767026
+        },
+        "2": {
+          "engine_steps_mean": 80.0,
+          "mean_latency": 10.172568425566684,
+          "mean_tpot": 0.20469863585238576,
+          "mean_ttft": 8.739673713433332,
+          "output_tokens_per_second": 8.782011562973082,
+          "throughput_ratio_vs_serial": 1.5068310245058292,
+          "tpot_ratio_vs_serial": 1.265757704304504
+        },
+        "4": {
+          "engine_steps_mean": 40.0,
+          "mean_latency": 6.71476473025006,
+          "mean_tpot": 0.23752839199761575,
+          "mean_ttft": 5.052062609266705,
+          "output_tokens_per_second": 13.945095126624187,
+          "throughput_ratio_vs_serial": 2.392720827774521,
+          "tpot_ratio_vs_serial": 1.4687610931557575
+        },
+        "8": {
+          "engine_steps_mean": 24.0,
+          "mean_latency": 6.714117785483313,
+          "mean_tpot": 0.37530127189286194,
+          "mean_ttft": 4.08700607821664,
+          "output_tokens_per_second": 15.55778519773589,
+          "throughput_ratio_vs_serial": 2.6694286656814152,
+          "tpot_ratio_vs_serial": 2.320682179221923
+        }
+      },
+      "serial_mean_tpot": 0.16172023694286855,
+      "serial_output_tokens_per_second": 5.828132962588274
+    },
+    "short": {
+      "by_concurrency": {
+        "1": {
+          "engine_steps_mean": 160.0,
+          "mean_latency": 13.53865317431658,
+          "mean_tpot": 0.1565661229666689,
+          "mean_ttft": 12.442684240949923,
+          "output_tokens_per_second": 6.228443220501187,
+          "throughput_ratio_vs_serial": 1.0642825258356634,
+          "tpot_ratio_vs_serial": 0.9500378186731879
+        },
+        "2": {
+          "engine_steps_mean": 80.0,
+          "mean_latency": 8.515226787750073,
+          "mean_tpot": 0.18049780890715042,
+          "mean_ttft": 7.251737938449999,
+          "output_tokens_per_second": 10.206952918085276,
+          "throughput_ratio_vs_serial": 1.7441086396981507,
+          "tpot_ratio_vs_serial": 1.0952544611834396
+        },
+        "4": {
+          "engine_steps_mean": 40.0,
+          "mean_latency": 6.349148929716603,
+          "mean_tpot": 0.2305736250571456,
+          "mean_ttft": 4.735130319233304,
+          "output_tokens_per_second": 15.190787873430962,
+          "throughput_ratio_vs_serial": 2.595719269648882,
+          "tpot_ratio_vs_serial": 1.399112781501871
+        },
+        "8": {
+          "engine_steps_mean": 24.0,
+          "mean_latency": 5.830281900883301,
+          "mean_tpot": 0.33249049416429316,
+          "mean_ttft": 3.502845929299898,
+          "output_tokens_per_second": 17.4848133308103,
+          "throughput_ratio_vs_serial": 2.987709871742632,
+          "tpot_ratio_vs_serial": 2.0175408180265295
+        }
+      },
+      "serial_mean_tpot": 0.16479988468809315,
+      "serial_output_tokens_per_second": 5.8522460618346415
+    }
+  },
+  "findings": [
+    "The batched model forward dominates one decode step at every measured batch size; pack and split together are a single digit share of the step at these cache lengths and grow with batch size and cached length, because they copy every layer on every step.",
+    "Prefill is one serial forward per request in both strategies, so at high concurrency prefill forwards are a large share of all forwards in a run and are not helped by decode batching at all.",
+    "Throughput rises with concurrency while TPOT also rises: one batched forward costs more than one single forward on this CPU, but far less than running the rows one by one, so the gain and the per token cost arrive together.",
+    "Padding waste is workload shaped: short prompts of near equal length waste almost nothing, while the mixed workload packs short rows against a longest row about four times their length."
+  ],
+  "forward_accounting": {
+    "note": "Prefill is one serial forward per request in both strategies. At continuous concurrency 8 on the short workload a run has 24 engine steps for 20 requests, so prefill forwards are the large majority of the steps that carry a forward before decode batching can help.",
+    "prefill_forwards_per_run": 20,
+    "requests_per_run": 20
+  },
+  "kind": "bottleneck_analysis",
+  "mixed_workload_padding_example": {
+    "batch_size": 8,
+    "lengths": [
+      5,
+      20,
+      6,
+      20,
+      9,
+      20,
+      5,
+      21
+    ],
+    "longest": 21,
+    "padded_token_slots": 62,
+    "valid_token_slots": 106,
+    "waste_fraction": 0.36904761904761907
+  },
+  "pilot_strategies": {
+    "continuous": {
+      "engine_steps": 40,
+      "output_tokens_per_second": 11.509255293670519,
+      "wall_duration_seconds": 13.90185515200028
+    },
+    "serial": {
+      "engine_steps": 160,
+      "output_tokens_per_second": 5.819545026923617,
+      "wall_duration_seconds": 27.493558218000544
+    }
+  },
+  "segments": [
+    {
+      "batch_size": 1,
+      "copies": {
+        "bytes_per_cached_token": 46080,
+        "pack_copied_bytes": 230400,
+        "packed_allocation_bytes": 230400,
+        "split_copied_bytes": 276480
+      },
+      "forward_seconds_median": 0.1936112539997339,
+      "lengths": [
+        5
+      ],
+      "pack_plus_split_share_of_step": 0.010966532915653412,
+      "pack_seconds_median": 0.0008350349999091122,
+      "padding": {
+        "batch_size": 1,
+        "lengths": [
+          5
+        ],
+        "longest": 5,
+        "padded_token_slots": 0,
+        "valid_token_slots": 5,
+        "waste_fraction": 0.0
+      },
+      "prefill_seconds_per_request_median": 0.6877415249991827,
+      "split_seconds_median": 0.0013117520002197125,
+      "trials": 7,
+      "workload_kind": "short"
+    },
+    {
+      "batch_size": 2,
+      "copies": {
+        "bytes_per_cached_token": 46080,
+        "pack_copied_bytes": 460800,
+        "packed_allocation_bytes": 460800,
+        "split_copied_bytes": 552960
+      },
+      "forward_seconds_median": 0.20216437199997017,
+      "lengths": [
+        5,
+        5
+      ],
+      "pack_plus_split_share_of_step": 0.014632906419913086,
+      "pack_seconds_median": 0.0008261920002041734,
+      "padding": {
+        "batch_size": 2,
+        "lengths": [
+          5,
+          5
+        ],
+        "longest": 5,
+        "padded_token_slots": 0,
+        "valid_token_slots": 10,
+        "waste_fraction": 0.0
+      },
+      "prefill_seconds_per_request_median": 0.5107775670003321,
+      "split_seconds_median": 0.0021759909996035276,
+      "trials": 7,
+      "workload_kind": "short"
+    },
+    {
+      "batch_size": 4,
+      "copies": {
+        "bytes_per_cached_token": 46080,
+        "pack_copied_bytes": 1013760,
+        "packed_allocation_bytes": 1105920,
+        "split_copied_bytes": 1198080
+      },
+      "forward_seconds_median": 0.19730562800032203,
+      "lengths": [
+        5,
+        5,
+        6,
+        6
+      ],
+      "pack_plus_split_share_of_step": 0.02897523651919649,
+      "pack_seconds_median": 0.001843621000261919,
+      "padding": {
+        "batch_size": 4,
+        "lengths": [
+          5,
+          5,
+          6,
+          6
+        ],
+        "longest": 6,
+        "padded_token_slots": 2,
+        "valid_token_slots": 22,
+        "waste_fraction": 0.08333333333333333
+      },
+      "prefill_seconds_per_request_median": 0.19776653549979528,
+      "split_seconds_median": 0.004043949999868346,
+      "trials": 7,
+      "workload_kind": "short"
+    },
+    {
+      "batch_size": 8,
+      "copies": {
+        "bytes_per_cached_token": 46080,
+        "pack_copied_bytes": 2396160,
+        "packed_allocation_bytes": 3317760,
+        "split_copied_bytes": 2764800
+      },
+      "forward_seconds_median": 0.19676554600027885,
+      "lengths": [
+        5,
+        5,
+        6,
+        6,
+        9,
+        8,
+        5,
+        8
+      ],
+      "pack_plus_split_share_of_step": 0.06920839848290239,
+      "pack_seconds_median": 0.005146395999872766,
+      "padding": {
+        "batch_size": 8,
+        "lengths": [
+          5,
+          5,
+          6,
+          6,
+          9,
+          8,
+          5,
+          8
+        ],
+        "longest": 9,
+        "padded_token_slots": 20,
+        "valid_token_slots": 52,
+        "waste_fraction": 0.2777777777777778
+      },
+      "prefill_seconds_per_request_median": 0.35999548300014794,
+      "split_seconds_median": 0.009483976999945298,
+      "trials": 7,
+      "workload_kind": "short"
+    },
+    {
+      "batch_size": 2,
+      "copies": {
+        "bytes_per_cached_token": 46080,
+        "pack_copied_bytes": 1152000,
+        "packed_allocation_bytes": 1843200,
+        "split_copied_bytes": 1244160
+      },
+      "forward_seconds_median": 0.20478285799981677,
+      "lengths": [
+        5,
+        20
+      ],
+      "pack_plus_split_share_of_step": 0.01865050772689076,
+      "pack_seconds_median": 0.0014088679999986198,
+      "padding": {
+        "batch_size": 2,
+        "lengths": [
+          5,
+          20
+        ],
+        "longest": 20,
+        "padded_token_slots": 15,
+        "valid_token_slots": 25,
+        "waste_fraction": 0.375
+      },
+      "prefill_seconds_per_request_median": 0.3281208609996611,
+      "split_seconds_median": 0.0024830219999785186,
+      "trials": 7,
+      "workload_kind": "mixed"
+    },
+    {
+      "batch_size": 4,
+      "copies": {
+        "bytes_per_cached_token": 46080,
+        "pack_copied_bytes": 2396160,
+        "packed_allocation_bytes": 3870720,
+        "split_copied_bytes": 2580480
+      },
+      "forward_seconds_median": 0.1802622559998781,
+      "lengths": [
+        5,
+        20,
+        6,
+        21
+      ],
+      "pack_plus_split_share_of_step": 0.03786253370209885,
+      "pack_seconds_median": 0.002580338999905507,
+      "padding": {
+        "batch_size": 4,
+        "lengths": [
+          5,
+          20,
+          6,
+          21
+        ],
+        "longest": 21,
+        "padded_token_slots": 32,
+        "valid_token_slots": 52,
+        "waste_fraction": 0.38095238095238093
+      },
+      "prefill_seconds_per_request_median": 0.24654381200025455,
+      "split_seconds_median": 0.004513435000262689,
+      "trials": 7,
+      "workload_kind": "mixed"
+    },
+    {
+      "batch_size": 8,
+      "copies": {
+        "bytes_per_cached_token": 46080,
+        "pack_copied_bytes": 5160960,
+        "packed_allocation_bytes": 8478720,
+        "split_copied_bytes": 5529600
+      },
+      "forward_seconds_median": 0.20412680199933675,
+      "lengths": [
+        5,
+        20,
+        6,
+        21,
+        9,
+        23,
+        5,
+        23
+      ],
+      "pack_plus_split_share_of_step": 0.06419976269047761,
+      "pack_seconds_median": 0.005401008999797341,
+      "padding": {
+        "batch_size": 8,
+        "lengths": [
+          5,
+          20,
+          6,
+          21,
+          9,
+          23,
+          5,
+          23
+        ],
+        "longest": 23,
+        "padded_token_slots": 72,
+        "valid_token_slots": 112,
+        "waste_fraction": 0.391304347826087
+      },
+      "prefill_seconds_per_request_median": 0.3015699874999882,
+      "split_seconds_median": 0.008602933000474877,
+      "trials": 7,
+      "workload_kind": "mixed"
+    }
+  ],
+  "simulation": false,
+  "source_runs": [
+    "real-main-seed1234",
+    "real-budget-seed1234",
+    "real-pilot-seed1234"
+  ]
+}
