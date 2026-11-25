@@ -1170,3 +1170,84 @@ TTFT for the deferred requests rather than as a uniform
 slowdown. A workload with longer prompts or a larger batch
 size would make the budget bind far more often; that is a
 prediction from the step accounting, not a measured result.
+
+## 31. Bottleneck analysis checkpoint
+
+The experiment stage closed with a segmented analysis rather
+than a presumed speedup. `benchmarks/bottleneck_analysis.py`
+times the three parts of one decode step separately on the
+locked model (medians of 7 trials) and recomputes the derived
+ratios from the stored main, budget, and pilot summaries; the
+record is `benchmarks/bottleneck_output.json`.
+
+Findings, in evidence order:
+
+- The batched model forward dominates one decode step at every
+  measured batch size (medians about 175 to 210 ms across
+  repeated runs). Pack and split together are about 1 to 3
+  percent of a step at batch sizes 1 to 4 and about 6 to 8
+  percent at batch size 8 (pack medians about 0.8 to 6.4 ms,
+  split medians about 1.2 to 12.0 ms). They copy every
+  layer on every step, so the share grows with batch size and
+  cached length, but at the cache lengths measured here (at
+  most 24 tokens) they are a secondary cost, not the
+  bottleneck.
+- Prefill is one serial forward per request in both strategies
+  (segmented medians typically about 0.18 to 0.36 s per
+  request, occasionally higher under shared CPU contention),
+  so a 20 request run pays 20 prefill
+  forwards that decode batching cannot help, and a long
+  prompt's prefill occupies its step while decode rows wait.
+  That is the largest structural cost the runtime itself
+  controls, and the recorded candidate for any future work;
+  batched or chunked prefill stays out of scope by design.
+- Padding waste is workload shaped: near zero for equal short
+  prompts at small batch sizes, 27.8 percent of packed slots
+  for the short workload at batch size 8, and about 37 to 39
+  percent for the mixed workload at every batch size.
+
+One small change was tried against the pack cost and rejected
+on its own measurements: pack was rewritten as one zero filled
+allocation per layer with one copy per row, the packed values
+verified identical, and the segmented medians after the change
+were within run to run noise of the before medians and
+slightly higher in most configurations. The change was
+reverted, so the shipped pack code is exactly the code that
+produced the main experiment, and the before and after medians
+are kept in `benchmarks/bottleneck_pack_attempt.json` as a
+tried and rejected change, not a speedup. No baseline, workload,
+or measurement boundary was changed at any point in this
+analysis.
+
+## 32. Results and architecture checkpoint
+
+The results are organised in `docs/results.md`, which is the
+single place the experiment numbers are interpreted:
+
+- The main experiment table (both workloads, every concurrency,
+  means across 3 repeats with the repeat range next to each
+  mean) and the budget mechanism table are recomputed from the
+  saved run summaries, and the three main charts in
+  `docs/charts/` (throughput, mean TTFT, mean latency) are
+  generated from `benchmarks/results/real-main-seed1234` by
+  `benchmarks/make_results_charts.py`, so every figure traces
+  back to that run id and one generation command. Whiskers are
+  the repeat range, not a confidence interval.
+- The text states the benefit and the cost together: throughput
+  rises to about 3.0 times serial on short and 2.7 times on
+  mixed at concurrency 8, TTFT and latency fall, and TPOT
+  roughly doubles over the same range; mixed latency saturates
+  at concurrency 4. Sample sizes (60 finished requests per
+  continuous point, below the plan target of about 100) and the
+  exploratory status of every figure are stated in the
+  document, and no percentile beyond the recorded means is
+  reported.
+- `docs/architecture.md` records the component map, the
+  ownership split (HTTP translation, single engine owner,
+  scheduler, executors, engine release timing), one request's
+  path end to end, and where each contract lives.
+
+With this checkpoint the code is frozen for the remaining
+stages: only correctness fixes and the final delivery work
+(README, resume notes, final acceptance) follow, per the fifth
+week freeze decision.
