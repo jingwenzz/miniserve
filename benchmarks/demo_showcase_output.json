@@ -1,0 +1,36 @@
+{
+  "act1": {
+    "show_a_output": 12,
+    "show_b_output": 6
+  },
+  "act2": {
+    "show_join_output": 4,
+    "show_long_output": 16
+  },
+  "act3": {
+    "admission_stats": {
+      "accepted": 2,
+      "disconnect_cancellations": 0,
+      "offered": 3,
+      "queue_full_rejection_rate": 0.3333333333333333,
+      "rejected_admission": 0,
+      "rejected_queue_full": 1,
+      "slow_consumer_cancellations": 0
+    },
+    "refused_error_code": "queue_full",
+    "running_output": 16,
+    "waiting_finish_reason": "cancelled"
+  },
+  "all_checks_passed": true,
+  "backend": "fake_simulation",
+  "checks": {
+    "act1_both_finished_full_length": true,
+    "act2_join_finished_full_length": true,
+    "act3_overload_refused_queue_full": true,
+    "act3_running_still_finished": true,
+    "act3_waiting_cancelled": true,
+    "join_submit_returned_while_long_running": true,
+    "second_submit_returned_while_first_running": true
+  },
+  "kind": "demo_showcase"
+}
