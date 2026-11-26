@@ -1251,3 +1251,59 @@ With this checkpoint the code is frozen for the remaining
 stages: only correctness fixes and the final delivery work
 (README, resume notes, final acceptance) follow, per the fifth
 week freeze decision.
+
+## 33. Clean environment reproduction checkpoint
+
+The frozen code was rebuilt from a fresh copy of the project
+files (no `.venv`, no cache directories, no egg-info) in a new
+virtual environment on a large disk, following only the README
+and `docs/reproduction.md`:
+
+- With the dev extra alone, installation succeeded and the
+  suite reported 152 passed and 8 skipped, the skips being
+  exactly the model dependent tests; the fake demo finished
+  3 requests in 5 steps with outputs 4, 2, and 3.
+- After adding the model extra (torch 2.9.1, transformers
+  4.57.6, inside the locked ranges), the same clean environment
+  reported 188 passed with no skips, and the real smoke run
+  finished with the 16 generated token ids matching
+  `benchmarks/reference_output.json` exactly, the request
+  released and no active cache left.
+- A search of source, tests, benchmarks, docs, and configs for
+  home and temporary directory paths returned no hits, and no
+  file outside the gitignored caches exceeds 500 KiB, so the
+  repository carries no personal path, no credential, and no
+  model weight.
+- Two environment pitfalls were re-encountered and are recorded
+  in `docs/reproduction.md`: a small default temporary
+  filesystem (512 MiB) makes the torch install fail with
+  `No space left on device` unless the environment and `TMPDIR`
+  live on the large disk, and the first model download needs
+  `HF_HUB_DISABLE_XET=1` on this network.
+- The final issue list (natural EOS never observed, pack and
+  split cost beyond 32 cached tokens unmeasured, HTTP exercised
+  on loopback only, one pre existing ruff note in
+  `tests/test_request.py`, exploratory sample sizes) is kept in
+  `docs/reproduction.md`. The code stays frozen.
+
+## 34. README and demo checkpoint
+
+The README was rewritten to match the shipped runtime instead
+of the early simulator description, in the order: what it does,
+how to run it, architecture, results, limitations. Every claim
+in it traces to a record: the result figures are the main
+experiment means from `docs/results.md`, the service behaviour
+is the frozen contract in `docs/service.md`, and the hygiene
+statement is the reproduction check above. The old statements
+that there is no real model and no HTTP API were removed
+because both shipped.
+
+The demo is reproducible without live parameter changes:
+`benchmarks/demo_showcase.py` runs three acts on the fake
+backend (concurrent submissions returning while a first request
+generates, a request joining mid generation, and an overload
+refusal next to a cancellation) and saves
+`benchmarks/demo_showcase_output.json` with all seven checks
+passing; the real model streaming act and the closing chart are
+scripted in `docs/demo.md`, with the saved records named as the
+fallback if anything fails live.
