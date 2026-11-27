@@ -1307,3 +1307,41 @@ refusal next to a cancellation) and saves
 passing; the real model streaming act and the closing chart are
 scripted in `docs/demo.md`, with the saved records named as the
 fallback if anything fails live.
+
+## 35. Resume and interview material checkpoint
+
+`docs/resume_notes.md` holds the delivery material, built only
+from shipped code and saved records:
+
+- Three resume bullets (core runtime, streaming service, and
+  the measured experiment), each naming the code files and the
+  record that supports it, with the experiment bullet carrying
+  its hardware, model, workload, and sample conditions next to
+  the numbers and no claim beyond them.
+- A 30 second overview and a 3 minute technical walkthrough
+  that follow one request through admission, prefill, batched
+  decode, streaming, and release.
+- Short answers to the nine interview questions, each pointing
+  at the document or record behind it, plus one hard case (the
+  batched cache construction), one wrong assumption (the pack
+  rewrite that measured no faster and was reverted), and one
+  evidenced trade off (batching buys waiting time, not cheaper
+  tokens).
+
+## 36. Final acceptance checkpoint
+
+`docs/final_acceptance.md` checks the shipped version against
+the plan acceptance list item by item. The final verification
+run on the frozen code reported 188 tests passed, mypy clean
+on 14 source files, the scheduling demo finishing 3 requests
+in 5 steps, the showcase demo passing all 7 checks, the six
+real model acceptance scenarios passing with every cache
+cleaned, the correctness comparison matching 12 of 12 cases,
+and the real single request run finishing and releasing its
+cache. The completion tier is C: the core runtime, the real
+batched decode with dynamic join and exit, the streaming HTTP
+service with bounded admission and cancellation, the
+reproducible experiments, and the demo and resume material are
+all part of the shipped version, with the limits of each stated
+where it is claimed. Future work is listed in the acceptance
+document and adds nothing to the shipped claims.
